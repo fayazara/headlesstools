@@ -1,0 +1,19 @@
+src/worker/oauth.ts
+  s_8ac9e1698503f2::t_ef6f4bf655d12e 14,19-21,23-116,120-128,172,174,242,244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "72f6d14382a31c73a33e9ddbbc2db2252616f901",
+  "prompts": {},
+  "sessions": {
+    "s_8ac9e1698503f2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7c4fd9e4-fc51-45a5-9da7-4ccc5eaa70a4",
+        "model": "unknown"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+src/worker/landing.tsx
+  s_8ac9e1698503f2::t_6232f1ec2b8f36 43,103,401
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "adfa5782db633d9056cac235dab1a8ffb6fd10f4",
+  "prompts": {},
+  "sessions": {
+    "s_8ac9e1698503f2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7c4fd9e4-fc51-45a5-9da7-4ccc5eaa70a4",
+        "model": "unknown"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

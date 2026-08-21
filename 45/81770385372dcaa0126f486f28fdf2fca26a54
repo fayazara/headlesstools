@@ -1,0 +1,61 @@
+migrations/0005_add_inbox_account_unique.sql
+  s_16b75fe2aa2fab::t_8926144b216d9a 1
+migrations/meta/0005_snapshot.json
+  s_16b75fe2aa2fab::t_bd72c2021a152c 1-777
+pnpm-lock.yaml
+  s_8ac9e1698503f2::t_8c3391b345ca10 35-37,1488-1518,1631-1633,1640-1642,1654-1656,1716-1718,1856-1858,1863-1868,1880-1882,1947-1950,1955-1957,2312-2317,2332-2334,2527-2529,2538-2552,2630-2635,2708-2710,2744-2752,2816-2819,2847-2849,2862-2864,2896-2898,2943-2957,2975-2980,3113-3115,4108-4147,4243-4246,4251-4254,4267-4268,4361-4362,4496-4497,4503-4506,4519-4520,4562-4563,4566-4569,4960-4977,4988-4989,5133-5144,5149-5165,5245-5252,5313-5314,5345-5354,5497-5507,5545-5546,5560-5564,5588-5589,5634-5656,5671-5680,5787-5788
+src/worker/landing.css
+  s_387e6b271875bf::t_11514184d59685 19-164
+src/worker/lib/highlight.ts
+  s_387e6b271875bf::t_8cbb2d9d75599a 1-74
+migrations/meta/_journal.json
+  s_16b75fe2aa2fab::t_537dc9c9bc3eaf 32-38
+src/db/schema.ts
+  s_16b75fe2aa2fab::t_e5b842649cb839 80
+src/worker/index.ts
+  s_16b75fe2aa2fab::t_6311aa5aa8c757 5,29-32
+src/worker/lib/handle.ts
+  s_16b75fe2aa2fab::t_f7bb07ce4f9dca 1-50
+src/worker/lib/pastes.ts
+  s_16b75fe2aa2fab::t_a03af153555c96 1-40
+src/worker/mcp.ts
+  s_16b75fe2aa2fab::t_f15843b7345665 6-7,163-169,171,173-198,239
+src/worker/routes/inboxes.ts
+  s_16b75fe2aa2fab::t_ba5acf367d2f0b 6,14-26,29,31-58
+src/worker/routes/paste-raw.ts
+  s_16b75fe2aa2fab::t_cc25ddcf18c432 1-23
+src/worker/routes/pastes.ts
+  s_16b75fe2aa2fab::t_62191c10a28332 3,6-7,88-89,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4581770385372dcaa0126f486f28fdf2fca26a54",
+  "prompts": {},
+  "sessions": {
+    "s_16b75fe2aa2fab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "753f3e6b-490f-4aa4-8703-38f0f9807cf1",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    },
+    "s_387e6b271875bf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fdafc7accffe4xp8dzDlf1gPGj",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    },
+    "s_8ac9e1698503f2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7c4fd9e4-fc51-45a5-9da7-4ccc5eaa70a4",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

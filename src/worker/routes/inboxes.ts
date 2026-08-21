@@ -1,0 +1,106 @@
+import { Hono } from "hono";
+import { and, desc, eq } from "drizzle-orm";
+import { getDb, inboxes, inboxMessages } from "../../db";
+import { requireAuth, type AuthVariables } from "../middleware/auth";
+import { requireCreateRateLimit } from "../middleware/rate-limit";
+import { generateInboxLocalPart } from "../lib/keys";
+
+const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
+
+app.post("/", requireAuth, requireCreateRateLimit, async (c) => {
+	const body = await c.req.json().catch(() => ({}));
+	const expiresInSeconds = typeof body?.expiresIn === "number" ? body.expiresIn : undefined;
+
+	const db = getDb(c.env.DB);
+	const address = `${generateInboxLocalPart()}@${c.env.INBOX_DOMAIN}`;
+
+	const [inbox] = await db
+		.insert(inboxes)
+		.values({
+			address,
+			accountId: c.get("accountId"),
+			expiresAt: expiresInSeconds ? new Date(Date.now() + expiresInSeconds * 1000) : undefined,
+		})
+		.returning();
+
+	return c.json(inbox, 201);
+});
+
+app.get("/", requireAuth, async (c) => {
+	const db = getDb(c.env.DB);
+	const rows = await db.select().from(inboxes).where(eq(inboxes.accountId, c.get("accountId")));
+	return c.json({ inboxes: rows });
+});
+
+app.get("/:id", requireAuth, async (c) => {
+	const db = getDb(c.env.DB);
+	const [inbox] = await db
+		.select()
+		.from(inboxes)
+		.where(and(eq(inboxes.id, c.req.param("id")), eq(inboxes.accountId, c.get("accountId"))))
+		.limit(1);
+
+	if (!inbox) return c.json({ error: "not found" }, 404);
+
+	const messages = await db
+		.select({
+			id: inboxMessages.id,
+			fromAddress: inboxMessages.fromAddress,
+			subject: inboxMessages.subject,
+			receivedAt: inboxMessages.receivedAt,
+			readAt: inboxMessages.readAt,
+		})
+		.from(inboxMessages)
+		.where(eq(inboxMessages.inboxId, inbox.id))
+		.orderBy(desc(inboxMessages.receivedAt));
+
+	return c.json({ ...inbox, messages });
+});
+
+app.get("/:id/messages/:messageId", requireAuth, async (c) => {
+	const db = getDb(c.env.DB);
+	const [inbox] = await db
+		.select()
+		.from(inboxes)
+		.where(and(eq(inboxes.id, c.req.param("id")), eq(inboxes.accountId, c.get("accountId"))))
+		.limit(1);
+	if (!inbox) return c.json({ error: "not found" }, 404);
+
+	const [message] = await db
+		.select()
+		.from(inboxMessages)
+		.where(and(eq(inboxMessages.id, c.req.param("messageId")), eq(inboxMessages.inboxId, inbox.id)))
+		.limit(1);
+	if (!message) return c.json({ error: "not found" }, 404);
+
+	if (!message.readAt) {
+		c.executionCtx.waitUntil(
+			db.update(inboxMessages).set({ readAt: new Date() }).where(eq(inboxMessages.id, message.id)).run(),
+		);
+	}
+
+	return c.json(message);
+});
+
+app.delete("/:id", requireAuth, async (c) => {
+	const db = getDb(c.env.DB);
+	const [inbox] = await db
+		.select()
+		.from(inboxes)
+		.where(and(eq(inboxes.id, c.req.param("id")), eq(inboxes.accountId, c.get("accountId"))))
+		.limit(1);
+	if (!inbox) return c.json({ error: "not found" }, 404);
+
+	const messages = await db
+		.select({ id: inboxMessages.id, rawR2Key: inboxMessages.rawR2Key })
+		.from(inboxMessages)
+		.where(eq(inboxMessages.inboxId, inbox.id));
+
+	await Promise.all(messages.filter((m) => m.rawR2Key).map((m) => c.env.R2.delete(m.rawR2Key!)));
+	await db.delete(inboxMessages).where(eq(inboxMessages.inboxId, inbox.id));
+	await db.delete(inboxes).where(eq(inboxes.id, inbox.id));
+
+	return c.json({ ok: true });
+});
+
+export default app;

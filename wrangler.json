@@ -1,0 +1,92 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "headlesstools",
+	"main": "./src/worker/index.ts",
+	"account_id": "7e259235995e0f3d11b31545743b30a3",
+	"compatibility_date": "2025-10-08",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true,
+	"assets": {
+		"directory": "./dist/client",
+		"run_worker_first": true
+	},
+	/**
+	 * Smart Placement
+	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+	 */
+	// "placement": {  "mode": "smart" }
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "headlesstools-db",
+			"database_id": "7af4d86b-870f-4869-bb8e-2b6dda3d0e10"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "R2",
+			"bucket_name": "headlesstools"
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_KV",
+			"id": "be1b9ee783594040bbf3ffd836f770b6"
+		}
+	],
+	"send_email": [
+		{
+			"name": "EMAIL"
+		}
+	],
+	"ratelimits": [
+		{
+			"name": "LOGIN_CODE_RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": { "limit": 5, "period": 60 }
+		},
+		{
+			"name": "VERIFY_RATE_LIMITER",
+			"namespace_id": "1002",
+			"simple": { "limit": 10, "period": 60 }
+		},
+		{
+			"name": "CREATE_RATE_LIMITER",
+			"namespace_id": "1003",
+			"simple": { "limit": 60, "period": 60 }
+		}
+	],
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 */
+	"vars": {
+		"INBOX_DOMAIN": "headlesstools.fayazahmed.com"
+	},
+	"triggers": {
+		"crons": ["0 * * * *"]
+	}
+	/**
+	 * Service Bindings (communicate between multiple Workers)
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 */
+	// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+}

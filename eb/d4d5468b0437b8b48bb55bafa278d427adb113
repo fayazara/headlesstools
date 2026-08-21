@@ -1,0 +1,49 @@
+migrations/0000_past_skrulls.sql
+  s_eef07e0a60d3d0::t_3add059c310021 1-81
+migrations/meta/_journal.json
+  s_eef07e0a60d3d0::t_980329d318acd6 1-13
+package.json
+  s_eef07e0a60d3d0::t_31fb459f55e837 1-47
+pnpm-lock.yaml
+  s_eef07e0a60d3d0::t_b95dcce280b31e 1-5126
+worker-configuration.d.ts
+  s_eef07e0a60d3d0::t_4ddafff2e04b66 1-15087
+src/worker/index.ts
+  s_eef07e0a60d3d0::t_b2936a35849fe2 1-49
+src/worker/landing.ts
+  s_eef07e0a60d3d0::t_7678ee6a37321a 1-204
+src/worker/lib/rate-limit.ts
+  s_eef07e0a60d3d0::t_a4dade83d723cf 1-8
+src/worker/mcp.ts
+  s_eef07e0a60d3d0::t_b082bea6e07785 1-271
+src/worker/middleware/rate-limit.ts
+  s_eef07e0a60d3d0::t_b3836bd581b086 1-17
+src/worker/oauth.ts
+  s_eef07e0a60d3d0::t_550678d8ac8c73 1-186
+src/worker/routes/auth.ts
+  s_eef07e0a60d3d0::t_6c5a92157b2f65 1-105
+src/worker/routes/inboxes.ts
+  s_eef07e0a60d3d0::t_5c2af92bf777be 1-106
+src/worker/routes/links.ts
+  s_eef07e0a60d3d0::t_30bc8ead3a5725 1-85
+src/worker/routes/pastes.ts
+  s_eef07e0a60d3d0::t_60c1f9dc5683b3 1-140
+wrangler.json
+  s_eef07e0a60d3d0::t_e22c3e667c384f 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ebd4d5468b0437b8b48bb55bafa278d427adb113",
+  "prompts": {},
+  "sessions": {
+    "s_eef07e0a60d3d0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f1c1f993-9243-42e2-a099-37e46d18eecb",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

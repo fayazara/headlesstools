@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import authRoutes from "./routes/auth";
 import linkRoutes from "./routes/links";
 import pasteRoutes from "./routes/pastes";
+import pasteRawRoutes from "./routes/paste-raw";
 import inboxRoutes from "./routes/inboxes";
 import emailMeRoutes from "./routes/email-me";
 import fileRoutes from "./routes/files";
@@ -25,13 +26,10 @@ app.route("/v1/email-me", emailMeRoutes);
 app.route("/v1/files", fileRoutes);
 app.route("/", oauthRoutes);
 
-// paste content lives at /p/:slug so it doesn't collide with the top-level
-// short-link redirect namespace below; reuses pasteRoutes' GET /:slug handler
-app.get("/p/:slug", async (c) => {
-	const url = new URL(c.req.url);
-	url.pathname = `/${c.req.param("slug")}`;
-	return pasteRoutes.fetch(new Request(url, c.req.raw), c.env, c.executionCtx);
-});
+// paste content lives at /p/:slug as raw text (not JSON-wrapped, so opening
+// the link shows just the content) so it doesn't collide with the top-level
+// short-link redirect namespace below
+app.route("/p", pasteRawRoutes);
 
 // raw file bytes live at /f/:slug (not JSON-wrapped, so the URL is directly
 // usable as an image src / download link)

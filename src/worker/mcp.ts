@@ -3,7 +3,8 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb, links, pastes, inboxes, inboxMessages, files } from "../db";
-import { generateSlug, generateInboxLocalPart } from "./lib/keys";
+import { generateSlug } from "./lib/keys";
+import { normalizeHandle, InvalidHandleError } from "./lib/handle";
 import { checkRateLimit } from "./lib/rate-limit";
 import { sendFromInbox, SendEmailError } from "./lib/send-email";
 import { emailMe, EmailMeError } from "./lib/email-me";
@@ -159,21 +160,42 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 	server.registerTool(
 		"create_inbox",
 		{
-			description: "Create a disposable email inbox and get its address",
-			inputSchema: z.object({ expiresIn: z.number().optional().describe("Seconds until the inbox expires") }),
+			description:
+				"Claim your email address by picking a handle (e.g. handle=\"acme-bot\" gives you acme-bot@hdls.tools). One address per account - call list_inboxes first to check if you already have one.",
+			inputSchema: z.object({
+				handle: z
+					.string()
+					.describe("Local part of the address, 3-32 chars, lowercase letters/numbers/hyphens"),
+			}),
 		},
-		async ({ expiresIn }) => {
+		async ({ handle: rawHandle }) => {
 			if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
-			const address = `${generateInboxLocalPart()}@${env.INBOX_DOMAIN}`;
-			const [inbox] = await db
-				.insert(inboxes)
-				.values({
-					address,
-					accountId,
-					expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined,
-				})
-				.returning();
-			return { content: [{ type: "text", text: JSON.stringify(inbox) }] };
+
+			let handle: string;
+			try {
+				handle = normalizeHandle(rawHandle);
+			} catch (err) {
+				const message = err instanceof InvalidHandleError ? err.message : "invalid handle";
+				return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+			}
+
+			const [existing] = await db.select().from(inboxes).where(eq(inboxes.accountId, accountId)).limit(1);
+			if (existing) {
+				return {
+					content: [{ type: "text", text: `Error: you already have an address: ${existing.address}` }],
+					isError: true,
+				};
+			}
+
+			const address = `${handle}@${env.INBOX_DOMAIN}`;
+
+			try {
+				const [inbox] = await db.insert(inboxes).values({ address, accountId }).returning();
+				return { content: [{ type: "text", text: JSON.stringify(inbox) }] };
+			} catch (err) {
+				const taken = err instanceof Error && /UNIQUE constraint failed/.test(err.message);
+				return { content: [{ type: "text", text: taken ? "Error: handle already taken" : "Error: failed to create inbox" }], isError: true };
+			}
 		},
 	);
 
@@ -214,7 +236,7 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 
 	server.registerTool(
 		"list_inboxes",
-		{ description: "List your inboxes", inputSchema: z.object({}) },
+		{ description: "List your email address(es). You get one address per account.", inputSchema: z.object({}) },
 		async () => {
 			const rows = await db.select().from(inboxes).where(eq(inboxes.accountId, accountId));
 			return { content: [{ type: "text", text: JSON.stringify(rows) }] };

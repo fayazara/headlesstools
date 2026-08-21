@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `inboxes_account_id_unique` ON `inboxes` (`account_id`);

@@ -29,6 +29,13 @@
       "when": 1787309491475,
       "tag": "0003_shocking_fixer",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787325132813,
+      "tag": "0005_add_inbox_account_unique",
+      "breakpoints": true
     }
   ]
 }

@@ -17,3 +17,149 @@
 		opacity: 0;
 	}
 }
+
+@keyframes fade-up {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.term-window {
+	box-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.04),
+		0 10px 28px -16px rgba(0, 0, 0, 0.14);
+}
+
+.feature-card {
+	transition: background-color 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.feature-card:hover {
+		background-color: var(--color-bg);
+	}
+	.feature-card:hover .feature-cmd {
+		color: color-mix(in oklab, var(--color-accent) 85%, black);
+	}
+}
+
+.code-block {
+	overflow: hidden;
+	border-radius: 8px;
+	border: 1px solid var(--color-line);
+	background: #fff;
+}
+
+.code-block-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	border-bottom: 1px solid var(--color-line);
+	background: #f5f5f4;
+	padding: 7px 8px 7px 14px;
+}
+
+.code-block-dots {
+	display: flex;
+	flex-shrink: 0;
+	gap: 5px;
+}
+
+.code-block-dots span {
+	display: inline-block;
+	height: 8px;
+	width: 8px;
+	border-radius: 999px;
+	background: var(--color-line);
+}
+
+.code-block-title {
+	margin-left: 4px;
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	color: var(--color-dim);
+}
+
+.copy-btn {
+	position: relative;
+	display: inline-flex;
+	height: 28px;
+	width: 28px;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	color: var(--color-dim);
+	transition:
+		background-color 150ms ease,
+		color 150ms ease,
+		transform 120ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.copy-btn:hover {
+		background-color: var(--color-line);
+		color: var(--color-ink);
+	}
+}
+
+.copy-btn:active {
+	transform: scale(0.92);
+}
+
+.copy-btn svg {
+	position: absolute;
+	height: 13px;
+	width: 13px;
+	transition:
+		opacity 200ms cubic-bezier(0.2, 0, 0, 1),
+		transform 200ms cubic-bezier(0.2, 0, 0, 1),
+		filter 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.copy-btn .icon-copy {
+	opacity: 1;
+	transform: scale(1);
+	filter: blur(0);
+}
+
+.copy-btn .icon-check {
+	opacity: 0;
+	transform: scale(0.25);
+	filter: blur(4px);
+	color: color-mix(in oklab, var(--color-accent) 85%, black);
+}
+
+.copy-btn[data-copied="true"] .icon-copy {
+	opacity: 0;
+	transform: scale(0.25);
+	filter: blur(4px);
+}
+
+.copy-btn[data-copied="true"] .icon-check {
+	opacity: 1;
+	transform: scale(1);
+	filter: blur(0);
+}
+
+.code-block-body {
+	overflow-x: auto;
+}
+
+.code-block-body .shiki {
+	margin: 0;
+	padding: 14px 18px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	line-height: 1.65;
+	background: transparent !important;
+}

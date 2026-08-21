@@ -43,6 +43,3 @@ export function generateSlug(bytes = 5): string {
 	return Array.from(arr, (b) => alphabet[b % alphabet.length]).join("");
 }
 
-export function generateInboxLocalPart(): string {
-	return generateSlug(8);
-}

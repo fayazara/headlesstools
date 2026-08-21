@@ -77,6 +77,7 @@ export const inboxes = sqliteTable("inboxes", {
 	address: text("address").notNull().unique(),
 	accountId: text("account_id")
 		.notNull()
+		.unique()
 		.references(() => accounts.id),
 	createdAt: createdAt(),
 	expiresAt: integer("expires_at", { mode: "timestamp" }),

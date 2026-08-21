@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { jsxRenderer } from "hono/jsx-renderer";
 import landingCss from "./landing.css?inline";
+import { highlightCode, type DocLang } from "./lib/highlight";
 
 const FEATURES = [
   {
@@ -16,7 +17,7 @@ const FEATURES = [
   {
     name: "mailbox",
     cmd: "create_inbox",
-    desc: "get a real email address on demand - read otps and webhooks, and send replies too. full send/receive, threaded.",
+    desc: "pick a handle, get a real email address - read otps and webhooks, and send replies too. one per account, full send/receive, threaded.",
   },
   {
     name: "email me",
@@ -144,7 +145,77 @@ function terminalScript(origin: string) {
   `;
 }
 
-function Page({ origin }: { origin: string }) {
+const copyScript = `
+(function () {
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".copy-btn");
+    if (!btn) return;
+    var target = document.getElementById(btn.getAttribute("data-copy-for"));
+    if (!target || !navigator.clipboard) return;
+    navigator.clipboard.writeText(target.textContent || "").then(function () {
+      btn.setAttribute("data-copied", "true");
+      clearTimeout(btn._copyTimer);
+      btn._copyTimer = setTimeout(function () {
+        btn.removeAttribute("data-copied");
+      }, 1600);
+    });
+  });
+})();
+`;
+
+async function CodeBlock({
+  id,
+  code,
+  lang,
+  title = "terminal",
+}: {
+  id: string;
+  code: string;
+  lang: DocLang;
+  title?: string;
+}) {
+  const html = await highlightCode(code.trim(), lang);
+  return (
+    <div class="code-block mb-3.5">
+      <div class="code-block-header">
+        <span class="code-block-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+        <span class="code-block-title">{title}</span>
+        <button type="button" class="copy-btn" data-copy-for={id} aria-label="Copy to clipboard">
+          <svg
+            class="icon-copy"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="9" y="9" width="12" height="12" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          <svg
+            class="icon-check"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </button>
+      </div>
+      <div id={id} class="code-block-body" dangerouslySetInnerHTML={{ __html: html }} />
+    </div>
+  );
+}
+
+async function Page({ origin }: { origin: string }) {
   return (
     <div class="wrap mx-auto max-w-3xl px-6">
       <header class="nav pt-8 pb-4 border-b border-neutral-200">
@@ -158,19 +229,27 @@ function Page({ origin }: { origin: string }) {
               headlesstools
             </span>
           </a>
-          <nav>
-            <a class="ml-6 text-sm text-dim hover:text-ink" href="#features">
+          <nav class="flex items-center">
+            <a class="ml-6 text-sm text-dim transition-colors hover:text-ink" href="#features">
               features
             </a>
-            <a class="ml-6 text-sm text-dim hover:text-ink" href="#docs">
+            <a class="ml-6 text-sm text-dim transition-colors hover:text-ink" href="#docs">
               docs
+            </a>
+            <a
+              class="ml-6 text-sm text-dim transition-colors hover:text-ink"
+              href="https://github.com/fayazara/headlesstools"
+              target="_blank"
+              rel="noreferrer"
+            >
+              github
             </a>
           </nav>
         </div>
       </header>
 
       <section class="pt-16 pb-8">
-        <h1 class="mb-3.5 text-[26px] leading-[1.25] tracking-[-0.02em] sm:text-[34px] font-medium">
+        <h1 class="text-balance mb-3.5 text-[26px] leading-[1.25] tracking-[-0.02em] sm:text-[34px] font-medium">
           Tools for agents
         </h1>
         <p class="text-pretty leading-[1.6] text-dim">
@@ -191,7 +270,7 @@ function Page({ origin }: { origin: string }) {
         </div>
       </section>
 
-      <div class="mt-4 mb-14 overflow-hidden rounded-lg border border-line bg-white">
+      <div class="term-window mt-4 mb-14 overflow-hidden rounded-lg border border-line bg-white">
         <div class="flex items-center gap-1.5 border-b border-line bg-[#f5f5f4] px-3.5 py-2.5">
           <span class="inline-block size-2.25 rounded-full bg-line" />
           <span class="inline-block size-2.25 rounded-full bg-line" />
@@ -208,9 +287,9 @@ function Page({ origin }: { origin: string }) {
         <h2 class="mb-[18px] font-mono text-xs tracking-[0.08em] text-dim uppercase">features</h2>
         <div class="grid grid-cols-1 gap-px border border-line bg-line sm:grid-cols-2">
           {FEATURES.map((f) => (
-            <div class="bg-white p-[22px]" key={f.cmd}>
+            <div class="feature-card bg-white p-[22px]" key={f.cmd}>
               <span class="mb-1.5 block font-semibold">{f.name}</span>
-              <span class="mb-2.5 block font-mono text-[11.5px] text-accent">{f.cmd}()</span>
+              <span class="feature-cmd mb-2.5 block font-mono text-[11.5px] text-accent transition-colors">{f.cmd}()</span>
               <p class="text-[13.5px] leading-[1.55] text-dim">{f.desc}</p>
             </div>
           ))}
@@ -222,52 +301,59 @@ function Page({ origin }: { origin: string }) {
         <p class="mb-2 text-[13px] text-dim">connect via MCP - opens a browser once, no token to copy</p>
 
         <h3 class="mt-0 mb-1 text-sm font-semibold">Claude Code</h3>
-        <pre class="mb-3.5 overflow-x-auto border border-line bg-white px-[18px] py-4 font-mono text-[13px] leading-[1.6]">
-          {`$ claude mcp add --transport http headlesstools \\
-    ${origin}/mcp`}
-        </pre>
+        <CodeBlock id="code-claude" lang="bash" code={`claude mcp add --transport http headlesstools ${origin}/mcp`} />
+
+        <h3 class="mt-8 mb-1 text-sm font-semibold">Grok CLI</h3>
+        <CodeBlock id="code-grok" lang="bash" code={`grok mcp add --transport http headlesstools ${origin}/mcp`} />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">Codex CLI</h3>
-        <pre class="mb-3.5 overflow-x-auto border border-line bg-white px-[18px] py-4 font-mono text-[13px] leading-[1.6]">
-          {`# ~/.codex/config.toml
-[mcp_servers.headlesstools]
-url = "${origin}/mcp"
+        <CodeBlock
+          id="code-codex-config"
+          lang="toml"
+          title="~/.codex/config.toml"
+          code={`[mcp_servers.headlesstools]\nurl = "${origin}/mcp"`}
+        />
+        <CodeBlock id="code-codex-login" lang="bash" code={`codex mcp login headlesstools`} />
 
-$ codex mcp login headlesstools`}
-        </pre>
+        <h3 class="mt-8 mb-1 text-sm font-semibold">Cursor</h3>
+        <CodeBlock
+          id="code-cursor"
+          lang="json"
+          title=".cursor/mcp.json"
+          code={`{\n  "mcpServers": {\n    "headlesstools": {\n      "url": "${origin}/mcp"\n    }\n  }\n}`}
+        />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">OpenCode</h3>
-        <pre class="mb-3.5 overflow-x-auto border border-line bg-white px-[18px] py-4 font-mono text-[13px] leading-[1.6]">
-          {`// opencode.json
-{
-  "mcp": {
-    "headlesstools": {
-      "type": "remote",
-      "url": "${origin}/mcp"
-    }
-  }
-}`}
-        </pre>
+        <CodeBlock
+          id="code-opencode"
+          lang="json"
+          title="opencode.json"
+          code={`{\n  "mcp": {\n    "headlesstools": {\n      "type": "remote",\n      "url": "${origin}/mcp"\n    }\n  }\n}`}
+        />
 
         <p class="mb-2 text-[13px] text-dim">or use the REST API directly</p>
-        <pre class="mb-3.5 overflow-x-auto border border-line bg-white px-[18px] py-4 font-mono text-[13px] leading-[1.6]">
-          {`$ curl -X POST ${origin}/v1/auth/signup -d '{"email":"you@example.com"}'
-$ curl -X POST ${origin}/v1/auth/verify -d '{"email":"...","code":"123456"}'
-> {"apiKey":"hlt_live_..."}
+        <CodeBlock
+          id="code-rest"
+          lang="bash"
+          code={`curl -X POST ${origin}/v1/auth/signup -d '{"email":"you@example.com"}'
+curl -X POST ${origin}/v1/auth/verify -d '{"email":"...","code":"123456"}'
+# => {"apiKey":"hlt_live_..."}
 
-$ curl -X POST ${origin}/v1/links -H "authorization: Bearer hlt_live_..." \\
-    -d '{"url":"https://example.com"}'
-$ curl -X POST ${origin}/v1/pastes -H "authorization: Bearer hlt_live_..." \\
-    -d '{"content":"hello world"}'
-$ curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..."`}
-        </pre>
+curl -X POST ${origin}/v1/links -H "authorization: Bearer hlt_live_..." \\
+  -d '{"url":"https://example.com"}'
+curl -X POST ${origin}/v1/pastes -H "authorization: Bearer hlt_live_..." \\
+  -d '{"content":"hello world"}'
+curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..." \\
+  -d '{"handle":"acme-bot"}'`}
+        />
       </section>
 
       <footer class="border-t border-line py-6 pb-12 text-[12.5px] text-dim">
-        headlesstools - cli-first, mcp-first tools for ai agents
+        headlesstools - mcp-first tools for ai agents
       </footer>
 
       <script dangerouslySetInnerHTML={{ __html: terminalScript(origin) }} />
+      <script dangerouslySetInnerHTML={{ __html: copyScript }} />
     </div>
   );
 }
@@ -284,7 +370,7 @@ app.use(
         <title>headlesstools</title>
         <meta
           name="description"
-          content="CLI-first, MCP-first SaaS tools for AI agents. URL shortener, pastebin, and a real send/receive mailbox."
+          content="MCP-first SaaS tools for AI agents. URL shortener, pastebin, and a real send/receive mailbox."
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />

@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { and, eq } from "drizzle-orm";
-import { getDb, pastes, apiKeys, type Db } from "../../db";
+import { getDb, pastes } from "../../db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireCreateRateLimit } from "../middleware/rate-limit";
-import { generateSlug, hashApiKey } from "../lib/keys";
+import { generateSlug } from "../lib/keys";
+import { resolvePaste } from "../lib/pastes";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -84,29 +85,10 @@ app.get("/", requireAuth, async (c) => {
 
 app.get("/:slug", async (c) => {
 	const db = getDb(c.env.DB);
-	const [paste] = await db.select().from(pastes).where(eq(pastes.slug, c.req.param("slug"))).limit(1);
+	const result = await resolvePaste(db, c.env, c.req.param("slug"), c.req.header("Authorization") ?? null);
+	if (result === "not_found") return c.json({ error: "not found" }, 404);
 
-	if (!paste) return c.json({ error: "not found" }, 404);
-	if (paste.expiresAt && paste.expiresAt.getTime() < Date.now()) {
-		return c.json({ error: "not found" }, 404);
-	}
-
-	if (paste.visibility === "private") {
-		const header = c.req.header("Authorization") ?? "";
-		const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
-		const keyHash = token ? await hashApiKey(token) : "";
-		if (!token || paste.accountId !== (await accountIdForKeyHash(db, keyHash))) {
-			return c.json({ error: "not found" }, 404);
-		}
-	}
-
-	const content = paste.content ?? (paste.r2Key ? await (await c.env.R2.get(paste.r2Key))?.text() : undefined);
-
-	if (paste.burnAfterRead) {
-		if (paste.r2Key) await c.env.R2.delete(paste.r2Key);
-		await db.delete(pastes).where(eq(pastes.id, paste.id));
-	}
-
+	const { paste, content } = result;
 	return c.json({
 		slug: paste.slug,
 		content,
@@ -130,11 +112,5 @@ app.delete("/:slug", requireAuth, async (c) => {
 
 	return c.json({ ok: true });
 });
-
-async function accountIdForKeyHash(db: Db, keyHash: string) {
-	if (!keyHash) return null;
-	const [row] = await db.select({ accountId: apiKeys.accountId }).from(apiKeys).where(eq(apiKeys.keyHash, keyHash)).limit(1);
-	return row?.accountId ?? null;
-}
 
 export default app;

@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb, inboxes, inboxMessages } from "../../db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireCreateRateLimit } from "../middleware/rate-limit";
-import { generateInboxLocalPart } from "../lib/keys";
+import { normalizeHandle, InvalidHandleError } from "../lib/handle";
 import { checkRateLimit } from "../lib/rate-limit";
 import { sendFromInbox, SendEmailError } from "../lib/send-email";
 
@@ -11,21 +11,51 @@ const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
 app.post("/", requireAuth, requireCreateRateLimit, async (c) => {
 	const body = await c.req.json().catch(() => ({}));
-	const expiresInSeconds = typeof body?.expiresIn === "number" ? body.expiresIn : undefined;
+	const rawHandle = typeof body?.handle === "string" ? body.handle : "";
+
+	if (!rawHandle) {
+		return c.json({ error: "handle required" }, 400);
+	}
+
+	let handle: string;
+	try {
+		handle = normalizeHandle(rawHandle);
+	} catch (err) {
+		if (err instanceof InvalidHandleError) return c.json({ error: err.message }, 400);
+		throw err;
+	}
 
 	const db = getDb(c.env.DB);
-	const address = `${generateInboxLocalPart()}@${c.env.INBOX_DOMAIN}`;
+	const accountId = c.get("accountId");
 
-	const [inbox] = await db
-		.insert(inboxes)
-		.values({
-			address,
-			accountId: c.get("accountId"),
-			expiresAt: expiresInSeconds ? new Date(Date.now() + expiresInSeconds * 1000) : undefined,
-		})
-		.returning();
+	const [existing] = await db.select().from(inboxes).where(eq(inboxes.accountId, accountId)).limit(1);
+	if (existing) {
+		return c.json({ error: "you already have an address", inbox: existing }, 409);
+	}
 
-	return c.json(inbox, 201);
+	const address = `${handle}@${c.env.INBOX_DOMAIN}`;
+
+	const [addressTaken] = await db.select().from(inboxes).where(eq(inboxes.address, address)).limit(1);
+	if (addressTaken) {
+		return c.json({ error: "handle already taken" }, 409);
+	}
+
+	try {
+		const [inbox] = await db
+			.insert(inboxes)
+			.values({
+				address,
+				accountId,
+			})
+			.returning();
+
+		return c.json(inbox, 201);
+	} catch (err) {
+		if (err instanceof Error && /UNIQUE constraint failed/.test(err.message)) {
+			return c.json({ error: "handle already taken" }, 409);
+		}
+		throw err;
+	}
 });
 
 app.get("/", requireAuth, async (c) => {

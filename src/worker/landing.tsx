@@ -286,6 +286,12 @@ app.use(
           name="description"
           content="CLI-first, MCP-first SaaS tools for AI agents. URL shortener, pastebin, and a real send/receive mailbox."
         />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap"
+        />
         <style dangerouslySetInnerHTML={{ __html: landingCss }} />
       </head>
       <body class="m-0 bg-bg font-sans text-ink antialiased">{children}</body>

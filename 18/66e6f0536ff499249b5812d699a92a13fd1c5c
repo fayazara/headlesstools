@@ -1,0 +1,19 @@
+src/worker/landing.tsx
+  s_eef07e0a60d3d0::t_32c4682d4f5962 289-294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1866e6f0536ff499249b5812d699a92a13fd1c5c",
+  "prompts": {},
+  "sessions": {
+    "s_eef07e0a60d3d0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f1c1f993-9243-42e2-a099-37e46d18eecb",
+        "model": "unknown"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

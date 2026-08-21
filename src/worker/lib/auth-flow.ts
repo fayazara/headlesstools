@@ -3,7 +3,7 @@ import { getDb, accounts, loginCodes } from "../../db";
 import { generateLoginCode, hashLoginCode } from "./keys";
 
 const CODE_TTL_MS = 10 * 60 * 1000;
-const AUTH_FROM = "auth@fayazahmed.com";
+const AUTH_FROM = "auth@hdls.tools";
 
 export async function sendLoginCode(db: ReturnType<typeof getDb>, env: Env, email: string) {
 	const code = generateLoginCode();

@@ -10,13 +10,13 @@ import redirectRoutes from "./routes/redirect";
 import { handleEmail } from "./email";
 import { cleanupExpired } from "./cleanup";
 import { createOAuthProvider, oauthRoutes } from "./oauth";
-import { landingPage } from "./landing";
+import landingRoutes from "./landing";
 import { dispatchDueScheduledEmails } from "./lib/email-me";
 import { getDb } from "../db";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get("/", (c) => landingPage(new URL(c.req.url).origin));
+app.route("/", landingRoutes);
 app.route("/v1/auth", authRoutes);
 app.route("/v1/links", linkRoutes);
 app.route("/v1/pastes", pasteRoutes);

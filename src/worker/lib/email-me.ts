@@ -1,7 +1,7 @@
 import { and, eq, isNull, lte } from "drizzle-orm";
 import { accounts, scheduledEmails, type Db } from "../../db";
 
-const NOTIFY_FROM = "reminders@fayazahmed.com";
+const NOTIFY_FROM = "reminders@hdls.tools";
 const MAX_ATTEMPTS = 5;
 
 export type EmailMeInput = {

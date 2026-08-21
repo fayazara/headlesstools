@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+	--font-sans:
+		"SF Compact", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+		"Helvetica Neue", Arial, "Noto Sans", sans-serif;
+	--font-mono: "Berkeley Mono", ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+	--color-ink: #111111;
+	--color-dim: #6b6b6b;
+	--color-line: #d9d9d9;
+	--color-bg: #fbfbfa;
+	--color-accent: #f97316;
+}
+
+@keyframes term-blink {
+	50% {
+		opacity: 0;
+	}
+}

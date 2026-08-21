@@ -40,8 +40,7 @@ const DOC_SNIPPETS = {
   codex: (origin: string) => `codex mcp add headlesstools --url ${origin}/mcp\ncodex mcp login headlesstools`,
   cursor: (origin: string) =>
     `{\n  "mcpServers": {\n    "headlesstools": {\n      "url": "${origin}/mcp"\n    }\n  }\n}`,
-  opencode: (origin: string) =>
-    `{\n  "mcp": {\n    "headlesstools": {\n      "type": "remote",\n      "url": "${origin}/mcp"\n    }\n  }\n}`,
+  opencode: (origin: string) => `opencode mcp add headlesstools --url ${origin}/mcp\nopencode mcp auth headlesstools`,
   rest: (origin: string) => `curl -X POST ${origin}/v1/auth/signup -d '{"email":"you@example.com"}'
 curl -X POST ${origin}/v1/auth/verify -d '{"email":"...","code":"123456"}'
 # => {"apiKey":"hlt_live_..."}
@@ -101,9 +100,7 @@ ${DOC_SNIPPETS.cursor(origin)}
 
 ### OpenCode
 
-\`opencode.json\`
-
-\`\`\`json
+\`\`\`bash
 ${DOC_SNIPPETS.opencode(origin)}
 \`\`\`
 
@@ -401,7 +398,7 @@ async function Page({ origin }: { origin: string }) {
         <CodeBlock id="code-cursor" lang="json" title=".cursor/mcp.json" code={DOC_SNIPPETS.cursor(origin)} />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">OpenCode</h3>
-        <CodeBlock id="code-opencode" lang="json" title="opencode.json" code={DOC_SNIPPETS.opencode(origin)} />
+        <CodeBlock id="code-opencode" lang="bash" code={DOC_SNIPPETS.opencode(origin)} />
 
         <p class="mb-2 text-[13px] text-dim">or use the REST API directly</p>
         <CodeBlock id="code-rest" lang="bash" code={DOC_SNIPPETS.rest(origin)} />

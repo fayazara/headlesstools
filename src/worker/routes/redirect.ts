@@ -19,7 +19,11 @@ app.get("/:slug", async (c) => {
 		)
 		.limit(1);
 
-	if (!link) return c.notFound();
+	if (!link) {
+		// not a short link — fall through to static assets (favicon, logos,
+		// etc.) since run_worker_first means nothing does this automatically
+		return c.env.ASSETS.fetch(c.req.raw);
+	}
 
 	c.executionCtx.waitUntil(
 		db

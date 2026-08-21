@@ -1,0 +1,33 @@
+migrations/0003_add_scheduled_emails.sql
+  s_eef07e0a60d3d0::t_155f212e65b46f 1-14
+migrations/0004_add_files.sql
+  s_eef07e0a60d3d0::t_599b7833673ec3 1-14
+migrations/meta/0002_snapshot.json
+  s_eef07e0a60d3d0::t_545e6f019fb38f 1-675
+migrations/meta/0003_snapshot.json
+  s_eef07e0a60d3d0::t_52d9c6900d9011 1-770
+migrations/meta/_journal.json
+  s_eef07e0a60d3d0::t_ce77d81202cae8 18-31
+src/worker/lib/email-me.ts
+  s_eef07e0a60d3d0::t_21377eec3111ac 1-89
+src/worker/routes/email-me.ts
+  s_eef07e0a60d3d0::t_f2a6c12526bca6 1-36
+wrangler.json
+  s_eef07e0a60d3d0::t_cd07fb7900198d 90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "951597b7087e1ca40c2a8562abc070f4244886b8",
+  "prompts": {},
+  "sessions": {
+    "s_eef07e0a60d3d0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f1c1f993-9243-42e2-a099-37e46d18eecb",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

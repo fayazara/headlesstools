@@ -282,7 +282,7 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 		"email_me",
 		{
 			description:
-				"Email a message to the account owner's registered email, right away or at a future time. Always goes to the account's own verified email — not an arbitrary address.",
+				"Email a message to the account owner's registered email, right away or at a future time. Always goes to the account's own verified email - not an arbitrary address.",
 			inputSchema: z.object({
 				subject: z.string(),
 				text: z.string().optional(),

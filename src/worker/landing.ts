@@ -53,7 +53,7 @@ export function landingPage(origin: string): Response {
     -webkit-font-smoothing: antialiased;
   }
   a { color: inherit; }
-  .wrap { max-width: 680px; margin: 0 auto; padding: 0 24px; }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 0 24px; }
   header.nav {
     border-bottom: 1px solid var(--line);
     padding: 18px 0;
@@ -89,7 +89,9 @@ export function landingPage(origin: string): Response {
     font-size: 13px;
     line-height: 1.7;
     padding: 18px 20px;
-    min-height: 230px;
+    height: 230px;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
   }
   .term-line { white-space: pre-wrap; word-break: break-word; margin-bottom: 10px; }
   .term-line.user { background: #f5f5f4; margin: 0 -20px 10px; padding: 6px 20px; }
@@ -256,7 +258,13 @@ $ curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..."</pre
       { type: "assistant", text: "Here's your shortened url: ${origin}/c93ba" },
       { type: "user", text: 'can you email me in 1 hour saying "reminder to check that blog post"' },
       { type: "tool", text: "Called headlesstools" },
-      { type: "assistant", text: "Scheduled — an email will go to fayaz@acme.org in 1 hour." },
+      { type: "assistant", text: "Scheduled - an email will go to fayaz@acme.org in 1 hour." },
+      { type: "user", text: "how many clicks does that url have?" },
+      { type: "tool", text: "Called headlesstools" },
+      { type: "assistant", text: "788 clicks so far." },
+      { type: "user", text: "can you upload this and give me a link [Image #1]" },
+      { type: "tool", text: "Called headlesstools" },
+      { type: "assistant", text: "Uploaded - here's your file: ${origin}/f/8h3kq" },
     ];
 
     function linkify(text) {
@@ -271,6 +279,10 @@ $ curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..."</pre
       });
     }
 
+    function scrollToBottom() {
+      body.scrollTop = body.scrollHeight;
+    }
+
     function typeInto(el, text, speed) {
       return new Promise(function (resolve) {
         var cursor = document.createElement("span");
@@ -282,6 +294,7 @@ $ curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..."</pre
         (function tick() {
           if (i <= text.length) {
             textNode.textContent = text.slice(0, i);
+            scrollToBottom();
             i++;
             setTimeout(tick, speed);
           } else {
@@ -305,11 +318,13 @@ $ curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..."</pre
           prompt.textContent = "❯";
           div.appendChild(prompt);
           body.appendChild(div);
+          scrollToBottom();
           await typeInto(div, line.text, 22);
           await sleep(500);
         } else if (line.type === "tool") {
           div.textContent = line.text;
           body.appendChild(div);
+          scrollToBottom();
           await sleep(700);
         } else {
           var bullet = document.createElement("span");
@@ -317,8 +332,10 @@ $ curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..."</pre
           bullet.textContent = "●";
           div.appendChild(bullet);
           body.appendChild(div);
+          scrollToBottom();
           await typeInto(div, line.text, 14);
           div.innerHTML = '<span class="prompt">●</span>' + linkify(line.text);
+          scrollToBottom();
           await sleep(1400);
         }
       }

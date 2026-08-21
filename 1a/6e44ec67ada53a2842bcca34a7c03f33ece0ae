@@ -1,0 +1,39 @@
+index.html
+  s_eef07e0a60d3d0::t_c7c456129b014b 5
+package.json
+  s_6ce704d09852b0::t_3b5153a2d73496 18,28
+pnpm-lock.yaml
+  s_6ce704d09852b0::t_7c4725333ad894 19,41,45-47,59,65,68,71,75-77,83,86,1492-1581,2006-2009,2229-2231,2310-2313,2366-2435,2446-2448,2761-2767,3202,3207,3570,3572,3873,3880,3965-4032,4072,4075,4077-4078,4080,4089,4096,4119,4123,4125,4148,4150,4154,4164,4172,4187,4194,4206,4382-4386,4515,4519,4526,4528,4539,4541,4575-4576,4735-4736,4796-4797,4835-4883,4894-4897,5277-5280,5311,5313-5314,5316-5317,5346,5357-5358
+worker-configuration.d.ts
+  s_eef07e0a60d3d0::t_abe9c1f565ceda 2,13
+src/worker/index.ts
+  s_6ce704d09852b0::t_2dc2b019aa4845 13,19
+tsconfig.worker.json
+  s_6ce704d09852b0::t_19db3ad1618c32 5-7
+vite.config.ts
+  s_6ce704d09852b0::t_f149f0a690a1fc 4,7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1a6e44ec67ada53a2842bcca34a7c03f33ece0ae",
+  "prompts": {},
+  "sessions": {
+    "s_6ce704d09852b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d4c860b5-b52b-4293-9489-97e15c632d3b",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    },
+    "s_eef07e0a60d3d0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f1c1f993-9243-42e2-a099-37e46d18eecb",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

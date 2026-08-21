@@ -32,7 +32,6 @@ const theme: ThemeInput = {
 		{
 			scope: [
 				"support.type.property-name.json",
-				"support.type.property-name.toml",
 				"entity.other.attribute-name",
 				"entity.name.tag",
 			],
@@ -55,18 +54,14 @@ function getHighlighter() {
 	if (!highlighterPromise) {
 		highlighterPromise = createHighlighterCore({
 			themes: [theme],
-			langs: [
-				() => import("shiki/langs/bash.mjs"),
-				() => import("shiki/langs/toml.mjs"),
-				() => import("shiki/langs/json.mjs"),
-			],
+			langs: [() => import("shiki/langs/bash.mjs"), () => import("shiki/langs/json.mjs")],
 			engine: createJavaScriptRegexEngine(),
 		});
 	}
 	return highlighterPromise;
 }
 
-export type DocLang = "bash" | "toml" | "json";
+export type DocLang = "bash" | "json";
 
 export async function highlightCode(code: string, lang: DocLang): Promise<string> {
 	const highlighter = await getHighlighter();

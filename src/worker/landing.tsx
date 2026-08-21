@@ -37,8 +37,7 @@ const FEATURES = [
 const DOC_SNIPPETS = {
   claude: (origin: string) => `claude mcp add --transport http headlesstools ${origin}/mcp`,
   grok: (origin: string) => `grok mcp add --transport http headlesstools ${origin}/mcp`,
-  codexConfig: (origin: string) => `[mcp_servers.headlesstools]\nurl = "${origin}/mcp"`,
-  codexLogin: () => `codex mcp login headlesstools`,
+  codex: (origin: string) => `codex mcp add headlesstools --url ${origin}/mcp\ncodex mcp login headlesstools`,
   cursor: (origin: string) =>
     `{\n  "mcpServers": {\n    "headlesstools": {\n      "url": "${origin}/mcp"\n    }\n  }\n}`,
   opencode: (origin: string) =>
@@ -88,14 +87,8 @@ ${DOC_SNIPPETS.grok(origin)}
 
 ### Codex CLI
 
-\`~/.codex/config.toml\`
-
-\`\`\`toml
-${DOC_SNIPPETS.codexConfig(origin)}
-\`\`\`
-
 \`\`\`bash
-${DOC_SNIPPETS.codexLogin()}
+${DOC_SNIPPETS.codex(origin)}
 \`\`\`
 
 ### Cursor
@@ -402,13 +395,7 @@ async function Page({ origin }: { origin: string }) {
         <CodeBlock id="code-grok" lang="bash" code={DOC_SNIPPETS.grok(origin)} />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">Codex CLI</h3>
-        <CodeBlock
-          id="code-codex-config"
-          lang="toml"
-          title="~/.codex/config.toml"
-          code={DOC_SNIPPETS.codexConfig(origin)}
-        />
-        <CodeBlock id="code-codex-login" lang="bash" code={DOC_SNIPPETS.codexLogin()} />
+        <CodeBlock id="code-codex" lang="bash" code={DOC_SNIPPETS.codex(origin)} />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">Cursor</h3>
         <CodeBlock id="code-cursor" lang="json" title=".cursor/mcp.json" code={DOC_SNIPPETS.cursor(origin)} />

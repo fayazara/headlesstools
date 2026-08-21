@@ -1,0 +1,25 @@
+public/robots.txt
+  s_8ac9e1698503f2::t_3875e124314a6a 1-12
+public/sitemap.xml
+  s_8ac9e1698503f2::t_32a8fe5e084fa9 1-7
+src/worker/landing.tsx
+  s_8ac9e1698503f2::t_8b5897c632e97b 5,35-128,399,402,409,411,414,417,420,460-466
+src/worker/lib/accept.ts
+  s_8ac9e1698503f2::t_b664354a15d3d8 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "070bc63df36277b53ef43aaaf8d4ed219ec4cd15",
+  "prompts": {},
+  "sessions": {
+    "s_8ac9e1698503f2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7c4fd9e4-fc51-45a5-9da7-4ccc5eaa70a4",
+        "model": "unknown"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

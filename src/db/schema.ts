@@ -87,12 +87,17 @@ export const inboxMessages = sqliteTable("inbox_messages", {
 	inboxId: text("inbox_id")
 		.notNull()
 		.references(() => inboxes.id),
+	direction: text("direction", { enum: ["inbound", "outbound"] })
+		.notNull()
+		.default("inbound"),
 	fromAddress: text("from_address").notNull(),
 	toAddress: text("to_address").notNull(),
 	subject: text("subject"),
 	textBody: text("text_body"),
 	htmlBody: text("html_body"),
 	rawR2Key: text("raw_r2_key"),
+	messageId: text("message_id"),
+	inReplyTo: text("in_reply_to"),
 	receivedAt: timestampCol("received_at"),
 	readAt: integer("read_at", { mode: "timestamp" }),
 });

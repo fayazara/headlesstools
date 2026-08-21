@@ -10,9 +10,9 @@ const FEATURES = [
 		desc: "share text/code snippets with a link. private, unlisted, or burn-after-read.",
 	},
 	{
-		name: "inbox",
+		name: "mailbox",
 		cmd: "create_inbox",
-		desc: "get a disposable email address on demand. read otps, webhooks, signup mail, programmatically.",
+		desc: "get a real email address on demand &mdash; read otps and webhooks, and send replies too. full send/receive, threaded.",
 	},
 ];
 

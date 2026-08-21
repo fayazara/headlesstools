@@ -27,19 +27,22 @@ export async function handleEmail(message: ForwardableEmailMessage, env: Env) {
 	}
 
 	const parsed = await PostalMime.parse(rawBuffer);
-	const messageId = crypto.randomUUID();
-	const rawR2Key = `inbox-raw/${inbox.id}/${messageId}`;
+	const rowId = crypto.randomUUID();
+	const rawR2Key = `inbox-raw/${inbox.id}/${rowId}`;
 
 	await env.R2.put(rawR2Key, rawBuffer);
 
 	await db.insert(inboxMessages).values({
-		id: messageId,
+		id: rowId,
 		inboxId: inbox.id,
+		direction: "inbound",
 		fromAddress: message.from,
 		toAddress: to,
 		subject: parsed.subject ?? "(no subject)",
 		textBody: parsed.text,
 		htmlBody: parsed.html,
 		rawR2Key,
+		messageId: parsed.messageId,
+		inReplyTo: parsed.inReplyTo,
 	});
 }

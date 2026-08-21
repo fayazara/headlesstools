@@ -5,6 +5,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb, links, pastes, inboxes, inboxMessages } from "../db";
 import { generateSlug, generateInboxLocalPart } from "./lib/keys";
 import { checkRateLimit } from "./lib/rate-limit";
+import { sendFromInbox, SendEmailError } from "./lib/send-email";
 
 function isValidUrl(value: string): boolean {
 	try {
@@ -171,6 +172,41 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 				})
 				.returning();
 			return { content: [{ type: "text", text: JSON.stringify(inbox) }] };
+		},
+	);
+
+	server.registerTool(
+		"send_email",
+		{
+			description: "Send an email from one of your inbox addresses. Set replyToMessageId to thread a reply to a received message.",
+			inputSchema: z.object({
+				inboxId: z.string(),
+				to: z.union([z.string(), z.array(z.string())]).describe("Recipient address(es)"),
+				subject: z.string(),
+				text: z.string().optional(),
+				html: z.string().optional(),
+				replyToMessageId: z.string().optional().describe("id of a received message to thread this reply to"),
+			}),
+		},
+		async ({ inboxId, to, subject, text, html, replyToMessageId }) => {
+			const [inbox] = await db
+				.select()
+				.from(inboxes)
+				.where(and(eq(inboxes.id, inboxId), eq(inboxes.accountId, accountId)))
+				.limit(1);
+			if (!inbox) return { content: [{ type: "text", text: "Error: not found" }], isError: true };
+			if (!text && !html) {
+				return { content: [{ type: "text", text: "Error: text or html required" }], isError: true };
+			}
+			if (!(await checkRateLimit(env.SEND_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
+
+			try {
+				const sent = await sendFromInbox(db, env, inbox.id, { inboxAddress: inbox.address, to, subject, text, html, replyToMessageId });
+				return { content: [{ type: "text", text: JSON.stringify(sent) }] };
+			} catch (err) {
+				const message = err instanceof SendEmailError ? err.message : "failed to send";
+				return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+			}
 		},
 	);
 

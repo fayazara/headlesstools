@@ -70,6 +70,11 @@
 			"name": "CREATE_RATE_LIMITER",
 			"namespace_id": "1003",
 			"simple": { "limit": 60, "period": 60 }
+		},
+		{
+			"name": "SEND_RATE_LIMITER",
+			"namespace_id": "1004",
+			"simple": { "limit": 20, "period": 60 }
 		}
 	],
 	/**

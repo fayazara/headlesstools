@@ -4,6 +4,8 @@ import { getDb, inboxes, inboxMessages } from "../../db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireCreateRateLimit } from "../middleware/rate-limit";
 import { generateInboxLocalPart } from "../lib/keys";
+import { checkRateLimit } from "../lib/rate-limit";
+import { sendFromInbox, SendEmailError } from "../lib/send-email";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -45,7 +47,9 @@ app.get("/:id", requireAuth, async (c) => {
 	const messages = await db
 		.select({
 			id: inboxMessages.id,
+			direction: inboxMessages.direction,
 			fromAddress: inboxMessages.fromAddress,
+			toAddress: inboxMessages.toAddress,
 			subject: inboxMessages.subject,
 			receivedAt: inboxMessages.receivedAt,
 			readAt: inboxMessages.readAt,
@@ -55,6 +59,39 @@ app.get("/:id", requireAuth, async (c) => {
 		.orderBy(desc(inboxMessages.receivedAt));
 
 	return c.json({ ...inbox, messages });
+});
+
+app.post("/:id/send", requireAuth, async (c) => {
+	const db = getDb(c.env.DB);
+	const [inbox] = await db
+		.select()
+		.from(inboxes)
+		.where(and(eq(inboxes.id, c.req.param("id")), eq(inboxes.accountId, c.get("accountId"))))
+		.limit(1);
+	if (!inbox) return c.json({ error: "not found" }, 404);
+
+	if (!(await checkRateLimit(c.env.SEND_RATE_LIMITER, c.get("accountId")))) {
+		return c.json({ error: "rate limit exceeded, try again shortly" }, 429);
+	}
+
+	const body = await c.req.json().catch(() => null);
+	const to = body?.to;
+	const subject = typeof body?.subject === "string" ? body.subject : "";
+	const text = typeof body?.text === "string" ? body.text : undefined;
+	const html = typeof body?.html === "string" ? body.html : undefined;
+	const replyToMessageId = typeof body?.replyToMessageId === "string" ? body.replyToMessageId : undefined;
+
+	if (!to || (typeof to !== "string" && !Array.isArray(to)) || !subject || (!text && !html)) {
+		return c.json({ error: "to, subject, and text or html are required" }, 400);
+	}
+
+	try {
+		const sent = await sendFromInbox(db, c.env, inbox.id, { inboxAddress: inbox.address, to, subject, text, html, replyToMessageId });
+		return c.json(sent, 201);
+	} catch (err) {
+		if (err instanceof SendEmailError) return c.json({ error: err.message }, 400);
+		throw err;
+	}
 });
 
 app.get("/:id/messages/:messageId", requireAuth, async (c) => {

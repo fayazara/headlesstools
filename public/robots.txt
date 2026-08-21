@@ -1,0 +1,12 @@
+# https://www.rfc-editor.org/rfc/rfc9309
+User-agent: *
+Allow: /
+Disallow: /v1/
+Disallow: /mcp
+Disallow: /authorize
+Disallow: /oauth/
+Disallow: /.well-known/
+Disallow: /p/
+Disallow: /f/
+
+Sitemap: https://hdls.tools/sitemap.xml

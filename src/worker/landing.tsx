@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { jsxRenderer } from "hono/jsx-renderer";
 import landingCss from "./landing.css?inline";
 import { highlightCode, type DocLang } from "./lib/highlight";
+import { prefersMarkdown } from "./lib/accept";
 
 const FEATURES = [
   {
@@ -30,6 +31,100 @@ const FEATURES = [
     desc: "upload a file, get back a public url. screenshots, reports, logs - anything an agent can't host on its own.",
   },
 ];
+
+// single source of truth for every doc snippet, shared by the highlighted
+// HTML code blocks below and the text/markdown rendition of the same page
+const DOC_SNIPPETS = {
+  claude: (origin: string) => `claude mcp add --transport http headlesstools ${origin}/mcp`,
+  grok: (origin: string) => `grok mcp add --transport http headlesstools ${origin}/mcp`,
+  codexConfig: (origin: string) => `[mcp_servers.headlesstools]\nurl = "${origin}/mcp"`,
+  codexLogin: () => `codex mcp login headlesstools`,
+  cursor: (origin: string) =>
+    `{\n  "mcpServers": {\n    "headlesstools": {\n      "url": "${origin}/mcp"\n    }\n  }\n}`,
+  opencode: (origin: string) =>
+    `{\n  "mcp": {\n    "headlesstools": {\n      "type": "remote",\n      "url": "${origin}/mcp"\n    }\n  }\n}`,
+  rest: (origin: string) => `curl -X POST ${origin}/v1/auth/signup -d '{"email":"you@example.com"}'
+curl -X POST ${origin}/v1/auth/verify -d '{"email":"...","code":"123456"}'
+# => {"apiKey":"hlt_live_..."}
+
+curl -X POST ${origin}/v1/links -H "authorization: Bearer hlt_live_..." \\
+  -d '{"url":"https://example.com"}'
+curl -X POST ${origin}/v1/pastes -H "authorization: Bearer hlt_live_..." \\
+  -d '{"content":"hello world"}'
+curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..." \\
+  -d '{"handle":"acme-bot"}'`,
+};
+
+function renderMarkdown(origin: string): string {
+  const features = FEATURES.map((f) => `- **${f.name}** — \`${f.cmd}()\` — ${f.desc}`).join("\n");
+
+  return `# headlesstools
+
+MCP-first SaaS tools for AI agents.
+
+Tools you need where you work everyday.
+
+A URL Shortener, a Pastebin, Mailbox, Self reminder, and file uploading and sharing primitives right inside Claude Code, Codex, Open Code or any harness that supports MCPs.
+
+## Features
+
+${features}
+
+## Docs
+
+Connect via MCP - opens a browser once, no token to copy.
+
+### Claude Code
+
+\`\`\`bash
+${DOC_SNIPPETS.claude(origin)}
+\`\`\`
+
+### Grok CLI
+
+\`\`\`bash
+${DOC_SNIPPETS.grok(origin)}
+\`\`\`
+
+### Codex CLI
+
+\`~/.codex/config.toml\`
+
+\`\`\`toml
+${DOC_SNIPPETS.codexConfig(origin)}
+\`\`\`
+
+\`\`\`bash
+${DOC_SNIPPETS.codexLogin()}
+\`\`\`
+
+### Cursor
+
+\`.cursor/mcp.json\`
+
+\`\`\`json
+${DOC_SNIPPETS.cursor(origin)}
+\`\`\`
+
+### OpenCode
+
+\`opencode.json\`
+
+\`\`\`json
+${DOC_SNIPPETS.opencode(origin)}
+\`\`\`
+
+Or use the REST API directly:
+
+\`\`\`bash
+${DOC_SNIPPETS.rest(origin)}
+\`\`\`
+
+---
+
+headlesstools - mcp-first tools for ai agents
+`;
+}
 
 function terminalScript(origin: string) {
   return `
@@ -301,51 +396,28 @@ async function Page({ origin }: { origin: string }) {
         <p class="mb-2 text-[13px] text-dim">connect via MCP - opens a browser once, no token to copy</p>
 
         <h3 class="mt-0 mb-1 text-sm font-semibold">Claude Code</h3>
-        <CodeBlock id="code-claude" lang="bash" code={`claude mcp add --transport http headlesstools ${origin}/mcp`} />
+        <CodeBlock id="code-claude" lang="bash" code={DOC_SNIPPETS.claude(origin)} />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">Grok CLI</h3>
-        <CodeBlock id="code-grok" lang="bash" code={`grok mcp add --transport http headlesstools ${origin}/mcp`} />
+        <CodeBlock id="code-grok" lang="bash" code={DOC_SNIPPETS.grok(origin)} />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">Codex CLI</h3>
         <CodeBlock
           id="code-codex-config"
           lang="toml"
           title="~/.codex/config.toml"
-          code={`[mcp_servers.headlesstools]\nurl = "${origin}/mcp"`}
+          code={DOC_SNIPPETS.codexConfig(origin)}
         />
-        <CodeBlock id="code-codex-login" lang="bash" code={`codex mcp login headlesstools`} />
+        <CodeBlock id="code-codex-login" lang="bash" code={DOC_SNIPPETS.codexLogin()} />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">Cursor</h3>
-        <CodeBlock
-          id="code-cursor"
-          lang="json"
-          title=".cursor/mcp.json"
-          code={`{\n  "mcpServers": {\n    "headlesstools": {\n      "url": "${origin}/mcp"\n    }\n  }\n}`}
-        />
+        <CodeBlock id="code-cursor" lang="json" title=".cursor/mcp.json" code={DOC_SNIPPETS.cursor(origin)} />
 
         <h3 class="mt-8 mb-1 text-sm font-semibold">OpenCode</h3>
-        <CodeBlock
-          id="code-opencode"
-          lang="json"
-          title="opencode.json"
-          code={`{\n  "mcp": {\n    "headlesstools": {\n      "type": "remote",\n      "url": "${origin}/mcp"\n    }\n  }\n}`}
-        />
+        <CodeBlock id="code-opencode" lang="json" title="opencode.json" code={DOC_SNIPPETS.opencode(origin)} />
 
         <p class="mb-2 text-[13px] text-dim">or use the REST API directly</p>
-        <CodeBlock
-          id="code-rest"
-          lang="bash"
-          code={`curl -X POST ${origin}/v1/auth/signup -d '{"email":"you@example.com"}'
-curl -X POST ${origin}/v1/auth/verify -d '{"email":"...","code":"123456"}'
-# => {"apiKey":"hlt_live_..."}
-
-curl -X POST ${origin}/v1/links -H "authorization: Bearer hlt_live_..." \\
-  -d '{"url":"https://example.com"}'
-curl -X POST ${origin}/v1/pastes -H "authorization: Bearer hlt_live_..." \\
-  -d '{"content":"hello world"}'
-curl -X POST ${origin}/v1/inboxes -H "authorization: Bearer hlt_live_..." \\
-  -d '{"handle":"acme-bot"}'`}
-        />
+        <CodeBlock id="code-rest" lang="bash" code={DOC_SNIPPETS.rest(origin)} />
       </section>
 
       <footer class="border-t border-line py-6 pb-12 text-[12.5px] text-dim">
@@ -385,6 +457,12 @@ app.use(
   )),
 );
 
-app.get("/", (c) => c.render(<Page origin={new URL(c.req.url).origin} />));
+app.get("/", (c) => {
+  const origin = new URL(c.req.url).origin;
+  if (prefersMarkdown(c.req.header("accept"))) {
+    return c.body(renderMarkdown(origin), 200, { "content-type": "text/markdown; charset=utf-8" });
+  }
+  return c.render(<Page origin={origin} />);
+});
 
 export default app;

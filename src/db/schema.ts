@@ -82,6 +82,36 @@ export const inboxes = sqliteTable("inboxes", {
 	expiresAt: integer("expires_at", { mode: "timestamp" }),
 });
 
+export const scheduledEmails = sqliteTable("scheduled_emails", {
+	id: id(),
+	accountId: text("account_id")
+		.notNull()
+		.references(() => accounts.id),
+	toAddress: text("to_address").notNull(),
+	subject: text("subject").notNull(),
+	textBody: text("text_body"),
+	htmlBody: text("html_body"),
+	sendAt: integer("send_at", { mode: "timestamp" }).notNull(),
+	sentAt: integer("sent_at", { mode: "timestamp" }),
+	attempts: integer("attempts").notNull().default(0),
+	lastError: text("last_error"),
+	createdAt: createdAt(),
+});
+
+export const files = sqliteTable("files", {
+	id: id(),
+	slug: text("slug").notNull().unique(),
+	accountId: text("account_id")
+		.notNull()
+		.references(() => accounts.id),
+	r2Key: text("r2_key").notNull(),
+	filename: text("filename").notNull(),
+	contentType: text("content_type").notNull(),
+	sizeBytes: integer("size_bytes").notNull(),
+	createdAt: createdAt(),
+	expiresAt: integer("expires_at", { mode: "timestamp" }),
+});
+
 export const inboxMessages = sqliteTable("inbox_messages", {
 	id: id(),
 	inboxId: text("inbox_id")

@@ -1,5 +1,5 @@
 import { and, eq, isNotNull, lt } from "drizzle-orm";
-import { getDb, links, pastes, inboxes, inboxMessages } from "../db";
+import { getDb, links, pastes, inboxes, inboxMessages, files } from "../db";
 
 export async function cleanupExpired(env: Env) {
 	const db = getDb(env.DB);
@@ -14,6 +14,15 @@ export async function cleanupExpired(env: Env) {
 	await Promise.all(expiredPastes.filter((p) => p.r2Key).map((p) => env.R2.delete(p.r2Key!)));
 	if (expiredPastes.length > 0) {
 		await db.delete(pastes).where(and(isNotNull(pastes.expiresAt), lt(pastes.expiresAt, now)));
+	}
+
+	const expiredFiles = await db
+		.select({ id: files.id, r2Key: files.r2Key })
+		.from(files)
+		.where(and(isNotNull(files.expiresAt), lt(files.expiresAt, now)));
+	await Promise.all(expiredFiles.map((f) => env.R2.delete(f.r2Key)));
+	if (expiredFiles.length > 0) {
+		await db.delete(files).where(and(isNotNull(files.expiresAt), lt(files.expiresAt, now)));
 	}
 
 	const expiredInboxes = await db

@@ -87,7 +87,7 @@
 		"INBOX_DOMAIN": "headlesstools.fayazahmed.com"
 	},
 	"triggers": {
-		"crons": ["0 * * * *"]
+		"crons": ["0 * * * *", "* * * * *"]
 	}
 	/**
 	 * Service Bindings (communicate between multiple Workers)

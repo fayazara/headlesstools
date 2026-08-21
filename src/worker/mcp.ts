@@ -2,10 +2,12 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { and, desc, eq } from "drizzle-orm";
-import { getDb, links, pastes, inboxes, inboxMessages } from "../db";
+import { getDb, links, pastes, inboxes, inboxMessages, files } from "../db";
 import { generateSlug, generateInboxLocalPart } from "./lib/keys";
 import { checkRateLimit } from "./lib/rate-limit";
 import { sendFromInbox, SendEmailError } from "./lib/send-email";
+import { emailMe, EmailMeError } from "./lib/email-me";
+import { createFile, FileUploadError } from "./lib/files";
 
 function isValidUrl(value: string): boolean {
 	try {
@@ -273,6 +275,90 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 				await db.update(inboxMessages).set({ readAt: new Date() }).where(eq(inboxMessages.id, message.id));
 			}
 			return { content: [{ type: "text", text: JSON.stringify(message) }] };
+		},
+	);
+
+	server.registerTool(
+		"email_me",
+		{
+			description:
+				"Email a message to the account owner's registered email, right away or at a future time. Always goes to the account's own verified email — not an arbitrary address.",
+			inputSchema: z.object({
+				subject: z.string(),
+				text: z.string().optional(),
+				html: z.string().optional(),
+				at: z.string().optional().describe("ISO 8601 timestamp to send at; omit to send immediately"),
+			}),
+		},
+		async ({ subject, text, html, at }) => {
+			if (!(await checkRateLimit(env.SEND_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
+
+			const atDate = at ? new Date(at) : undefined;
+			if (at && (!atDate || Number.isNaN(atDate.getTime()))) {
+				return { content: [{ type: "text", text: "Error: invalid 'at' timestamp" }], isError: true };
+			}
+
+			try {
+				const row = await emailMe(db, env, accountId, { subject, text, html, at: atDate });
+				return { content: [{ type: "text", text: JSON.stringify(row) }] };
+			} catch (err) {
+				const message = err instanceof EmailMeError ? err.message : "failed to email";
+				return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+			}
+		},
+	);
+
+	server.registerTool(
+		"create_file",
+		{
+			description: "Upload a file (base64-encoded content) and get back a public, directly-linkable URL. Max 10MB.",
+			inputSchema: z.object({
+				content: z.string().describe("Base64-encoded file content"),
+				filename: z.string(),
+				contentType: z.string().optional().describe("MIME type, e.g. image/png"),
+				slug: z.string().min(3).max(32).optional(),
+				expiresIn: z.number().optional().describe("Seconds until the file expires"),
+			}),
+		},
+		async ({ content, filename, contentType, slug, expiresIn }) => {
+			if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
+			try {
+				const file = await createFile(db, env, accountId, { content, filename, contentType, slug, expiresIn }, baseUrl);
+				return { content: [{ type: "text", text: JSON.stringify(file) }] };
+			} catch (err) {
+				const message = err instanceof FileUploadError ? err.message : "failed to upload";
+				return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+			}
+		},
+	);
+
+	server.registerTool(
+		"list_files",
+		{ description: "List your uploaded files", inputSchema: z.object({}) },
+		async () => {
+			const rows = await db
+				.select({
+					slug: files.slug,
+					filename: files.filename,
+					contentType: files.contentType,
+					sizeBytes: files.sizeBytes,
+					createdAt: files.createdAt,
+				})
+				.from(files)
+				.where(eq(files.accountId, accountId));
+			return { content: [{ type: "text", text: JSON.stringify(rows) }] };
+		},
+	);
+
+	server.registerTool(
+		"delete_file",
+		{ description: "Delete an uploaded file", inputSchema: z.object({ slug: z.string() }) },
+		async ({ slug }) => {
+			const [file] = await db.select().from(files).where(and(eq(files.slug, slug), eq(files.accountId, accountId))).limit(1);
+			if (!file) return { content: [{ type: "text", text: "Error: not found" }], isError: true };
+			await env.R2.delete(file.r2Key);
+			await db.delete(files).where(eq(files.id, file.id));
+			return { content: [{ type: "text", text: "ok" }] };
 		},
 	);
 

@@ -15,6 +15,20 @@
       "when": 1787306613627,
       "tag": "0001_breezy_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787307806306,
+      "tag": "0002_harsh_ares",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787309491475,
+      "tag": "0003_shocking_fixer",
+      "breakpoints": true
     }
   ]
 }

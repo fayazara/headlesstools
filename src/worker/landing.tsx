@@ -305,12 +305,9 @@ async function Page({ origin }: { origin: string }) {
     <div class="wrap mx-auto max-w-3xl px-6">
       <header class="nav pt-8 pb-4 border-b border-neutral-200">
         <div class="flex items-center justify-between">
-          <a class="text-base font-semibold tracking-[-0.02em] flex gap-1" href="/">
-            <svg class="h-4.5 w-auto" width="110" height="111" viewBox="0 0 110 111" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0 55C0 24.6244 24.6243 0 55 0C85.3757 0 110 24.6243 110 55V106.452C110 108.589 108.267 110.323 106.129 110.323H3.87096C1.73309 110.323 0 108.589 0 106.452V55Z" fill="currentColor" />
-            </svg>
-            <span>
-
+          <a class="text-base font-semibold flex gap-1" href="/">
+            <img src="/logomark.png" alt="headlesstools" class="h-6 w-auto" />
+            <span class="mt-0.5">
               headlesstools
             </span>
           </a>

@@ -1,10 +1,18 @@
 # headlesstools
 
-MCP-first SaaS tools for AI agents — a URL shortener, pastebin, a real send/receive mailbox, a self-reminder tool, and file hosting. Callable as MCP tools or a plain REST API, right from Claude Code, Codex, Cursor, OpenCode, Grok CLI, or any harness that speaks MCP or HTTP.
+Headless tools for AI agents.
 
-Live at [hdls.tools](https://hdls.tools).
+Callable as MCP tools or a plain REST API, right from Claude Code, Codex, Cursor, OpenCode, Grok CLI, or any harness that speaks MCP or HTTP.
 
-## Features
+Sign up at [hdls.tools](https://hdls.tools)
+
+
+
+https://github.com/user-attachments/assets/a6846cd4-9524-4a0a-8ca3-4e5464a02f30
+
+
+
+## Tools
 
 - **URL shortener** (`shorten_url`) — long URL in, short link out, with click tracking.
 - **Pastebin** (`create_paste`) — share text/code snippets with a link. private, unlisted, or burn-after-read.

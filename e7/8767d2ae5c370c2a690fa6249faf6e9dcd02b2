@@ -1,0 +1,21 @@
+src/worker/lib/auth-flow.ts
+  s_47ee50e9eb221a::t_1304de8d8618e3 8-13
+src/worker/routes/auth.ts
+  s_47ee50e9eb221a::t_8bd204cffb1f87 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e78767d2ae5c370c2a690fa6249faf6e9dcd02b2",
+  "prompts": {},
+  "sessions": {
+    "s_47ee50e9eb221a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c29f674b-fede-420a-8d8f-ff88629a9e58",
+        "model": "unknown"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

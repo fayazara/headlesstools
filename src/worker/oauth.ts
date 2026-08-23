@@ -95,16 +95,31 @@ function page(title: string, body: string) {
     padding: 10px 12px;
     border-radius: 6px;
     border: none;
-    background: #f97316;
-    color: #111111;
+    background: #111111;
+    color: #ffffff;
     font-weight: 600;
     font-size: 14px;
     cursor: pointer;
     transition: background-color 150ms ease, transform 120ms ease-out;
   }
-  button:hover { background: #ea6a0f; }
+  button:hover { background: #2a2a2a; }
   button:active { transform: scale(0.97); }
-  button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3); }
+  button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.3); }
+  button:disabled { cursor: default; opacity: 0.6; }
+  button:disabled:active { transform: none; }
+  .spinner {
+    display: none;
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    vertical-align: -2px;
+    animation: spin 700ms linear infinite;
+  }
+  button:disabled .spinner { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .error {
     margin: 0 0 16px;
     border: 1px solid #fecaca;
@@ -126,6 +141,20 @@ function page(title: string, body: string) {
     </div>
     <div class="card-body">${body}</div>
   </div>
+  <script>
+    document.querySelectorAll("form").forEach(function (form) {
+      form.addEventListener("submit", function (event) {
+        var button = form.querySelector("button[type=submit]");
+        if (!button) return;
+        if (button.disabled) {
+          event.preventDefault();
+          return;
+        }
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner"></span>' + (button.dataset.loadingText || "Sending…");
+      });
+    });
+  </script>
 </body>
 </html>`,
 		{ headers: { "content-type": "text/html; charset=utf-8" } },
@@ -170,7 +199,7 @@ oauthRoutes.get("/authorize", async (c) => {
 			<input type="hidden" name="qs" value="${escapeHtml(search)}" />
 			<label for="email">Email</label>
 			<input type="email" id="email" name="email" placeholder="you@example.com" required autofocus />
-			<button type="submit">Send login code</button>
+			<button type="submit" data-loading-text="Sending…">Send login code</button>
 		</form>`,
 	);
 });
@@ -189,7 +218,7 @@ oauthRoutes.post("/authorize/code", async (c) => {
 		return renderCodeStep(qs, email, "Too many requests, try again shortly");
 	}
 
-	await sendLoginCode(getDb(c.env.DB), c.env, email);
+	await sendLoginCode(getDb(c.env.DB), c.env, email, c.executionCtx);
 	return renderCodeStep(qs, email);
 });
 
@@ -240,7 +269,7 @@ async function renderCodeStep(qs: string, email: string, error?: string) {
 			<input type="hidden" name="email" value="${escapeHtml(email)}" />
 			<label for="code">Login code</label>
 			<input type="text" id="code" name="code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" required autofocus />
-			<button type="submit">Verify</button>
+			<button type="submit" data-loading-text="Verifying…">Verify</button>
 		</form>`,
 	);
 }

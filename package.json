@@ -33,6 +33,9 @@
 		"wrangler": "4.125.0"
 	},
 	"private": true,
+	"pnpm": {
+		"onlyBuiltDependencies": ["esbuild", "workerd"]
+	},
 	"scripts": {
 		"build": "tsc -b && vite build",
 		"cf-typegen": "wrangler types",

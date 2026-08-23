@@ -19,7 +19,7 @@ app.post("/signup", async (c) => {
 		return c.json({ error: "too many requests, try again shortly" }, 429);
 	}
 
-	await sendLoginCode(getDb(c.env.DB), c.env, email);
+	await sendLoginCode(getDb(c.env.DB), c.env, email, c.executionCtx);
 	return c.json({ ok: true });
 });
 

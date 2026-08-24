@@ -36,6 +36,13 @@
       "when": 1787325132813,
       "tag": "0005_add_inbox_account_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787566419589,
+      "tag": "0006_wakeful_naoko",
+      "breakpoints": true
     }
   ]
 }

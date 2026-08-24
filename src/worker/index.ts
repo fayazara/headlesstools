@@ -14,8 +14,19 @@ import { createOAuthProvider, oauthRoutes } from "./oauth";
 import landingRoutes from "./landing";
 import { dispatchDueScheduledEmails } from "./lib/email-me";
 import { getDb } from "../db";
+import { InvalidBodyError, PayloadTooLargeError, readBodyWithLimit } from "./lib/body";
 
 const app = new Hono<{ Bindings: Env }>();
+
+app.use("*", async (c, next) => {
+	await next();
+	c.res.headers.set("x-content-type-options", "nosniff");
+	c.res.headers.set("referrer-policy", "strict-origin-when-cross-origin");
+	c.res.headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
+	if (new URL(c.req.url).pathname.startsWith("/v1/") && !c.res.headers.has("cache-control")) {
+		c.res.headers.set("cache-control", "no-store");
+	}
+});
 
 app.route("/", landingRoutes);
 app.route("/v1/auth", authRoutes);
@@ -45,7 +56,24 @@ app.route("/", redirectRoutes);
 const oauthProvider = createOAuthProvider(app);
 
 export default {
-	fetch: (request, env, ctx) => oauthProvider.fetch(request, env, ctx),
+	fetch: async (request, env, ctx) => {
+		const declaredLength = Number(request.headers.get("content-length") ?? 0);
+		if (Number.isFinite(declaredLength) && declaredLength > 12 * 1024 * 1024) {
+			return Response.json({ error: "request body too large" }, { status: 413 });
+		}
+		const path = new URL(request.url).pathname;
+		if (request.body && (path === "/oauth/token" || path === "/oauth/register")) {
+			try {
+				const body = await readBodyWithLimit(request, 64 * 1024);
+				request = new Request(request, { body });
+			} catch (error) {
+				if (error instanceof PayloadTooLargeError) return Response.json({ error: error.message }, { status: 413 });
+				if (error instanceof InvalidBodyError) return Response.json({ error: error.message }, { status: 400 });
+				throw error;
+			}
+		}
+		return oauthProvider.fetch(request, env, ctx);
+	},
 	async email(message, env) {
 		// awaited directly (not via ctx.waitUntil) since message.raw must be
 		// consumed while the message is still guaranteed valid

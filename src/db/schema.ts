@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const id = () =>
 	text("id")
@@ -94,10 +94,12 @@ export const scheduledEmails = sqliteTable("scheduled_emails", {
 	htmlBody: text("html_body"),
 	sendAt: integer("send_at", { mode: "timestamp" }).notNull(),
 	sentAt: integer("sent_at", { mode: "timestamp" }),
+	sendingAt: integer("sending_at", { mode: "timestamp" }),
+	idempotencyKey: text("idempotency_key"),
 	attempts: integer("attempts").notNull().default(0),
 	lastError: text("last_error"),
 	createdAt: createdAt(),
-});
+}, (table) => [uniqueIndex("scheduled_emails_account_idempotency_unique").on(table.accountId, table.idempotencyKey)]);
 
 export const files = sqliteTable("files", {
 	id: id(),
@@ -129,6 +131,26 @@ export const inboxMessages = sqliteTable("inbox_messages", {
 	rawR2Key: text("raw_r2_key"),
 	messageId: text("message_id"),
 	inReplyTo: text("in_reply_to"),
+	sizeBytes: integer("size_bytes").notNull().default(0),
+	deliveryStatus: text("delivery_status", { enum: ["pending", "sending", "sent", "failed"] })
+		.notNull()
+		.default("sent"),
+	deliveryAttempts: integer("delivery_attempts").notNull().default(0),
+	deliveryError: text("delivery_error"),
+	idempotencyKey: text("idempotency_key"),
 	receivedAt: timestampCol("received_at"),
 	readAt: integer("read_at", { mode: "timestamp" }),
+}, (table) => [uniqueIndex("inbox_messages_inbox_idempotency_unique").on(table.inboxId, table.idempotencyKey)]);
+
+export const pendingUploads = sqliteTable("pending_uploads", {
+	tokenHash: text("token_hash").primaryKey(),
+	accountId: text("account_id")
+		.notNull()
+		.references(() => accounts.id),
+	filename: text("filename").notNull(),
+	contentType: text("content_type").notNull(),
+	slug: text("slug"),
+	fileExpiresAt: integer("file_expires_at", { mode: "timestamp" }),
+	expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+	createdAt: createdAt(),
 });

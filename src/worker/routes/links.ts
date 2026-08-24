@@ -3,54 +3,33 @@ import { and, eq } from "drizzle-orm";
 import { getDb, links } from "../../db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireCreateRateLimit } from "../middleware/rate-limit";
-import { generateSlug } from "../lib/keys";
+import { InvalidBodyError, PayloadTooLargeError, readJsonWithLimit } from "../lib/body";
+import { createLink, LinkError } from "../lib/links";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-function isValidUrl(value: string): boolean {
-	try {
-		const u = new URL(value);
-		return u.protocol === "http:" || u.protocol === "https:";
-	} catch {
-		return false;
-	}
-}
-
 app.post("/", requireAuth, requireCreateRateLimit, async (c) => {
-	const body = await c.req.json().catch(() => null);
-	const targetUrl = typeof body?.url === "string" ? body.url.trim() : "";
-	const requestedSlug = typeof body?.slug === "string" ? body.slug.trim() : undefined;
-	const expiresInSeconds = typeof body?.expiresIn === "number" ? body.expiresIn : undefined;
-
-	if (!isValidUrl(targetUrl)) {
-		return c.json({ error: "valid http(s) url required" }, 400);
+	let body: { url?: unknown; slug?: unknown; expiresIn?: unknown };
+	try {
+		body = await readJsonWithLimit(c.req.raw, 32 * 1024);
+	} catch (error) {
+		if (error instanceof PayloadTooLargeError) return c.json({ error: error.message }, 413);
+		if (error instanceof InvalidBodyError) return c.json({ error: error.message }, 400);
+		throw error;
 	}
-	if (requestedSlug && !/^[a-zA-Z0-9_-]{3,32}$/.test(requestedSlug)) {
-		return c.json({ error: "slug must be 3-32 chars, alphanumeric/_/- only" }, 400);
+	try {
+		const link = await createLink(getDb(c.env.DB), c.get("accountId"), {
+			url: typeof body.url === "string" ? body.url : "",
+			slug: typeof body.slug === "string" ? body.slug.trim() : undefined,
+			expiresIn: typeof body.expiresIn === "number" ? body.expiresIn : undefined,
+		});
+
+		const shortUrl = new URL(`/${link.slug}`, c.req.url).toString();
+		return c.json({ slug: link.slug, shortUrl, targetUrl: link.targetUrl, createdAt: link.createdAt }, 201);
+	} catch (error) {
+		if (error instanceof LinkError) return c.json({ error: error.message }, error.message.includes("taken") ? 409 : 400);
+		throw error;
 	}
-
-	const db = getDb(c.env.DB);
-	const slug = requestedSlug ?? generateSlug();
-
-	if (requestedSlug) {
-		const [existing] = await db.select().from(links).where(eq(links.slug, slug)).limit(1);
-		if (existing) {
-			return c.json({ error: "slug already taken" }, 409);
-		}
-	}
-
-	const [link] = await db
-		.insert(links)
-		.values({
-			slug,
-			targetUrl,
-			accountId: c.get("accountId"),
-			expiresAt: expiresInSeconds ? new Date(Date.now() + expiresInSeconds * 1000) : undefined,
-		})
-		.returning();
-
-	const shortUrl = new URL(`/${link.slug}`, c.req.url).toString();
-	return c.json({ slug: link.slug, shortUrl, targetUrl: link.targetUrl, createdAt: link.createdAt }, 201);
 });
 
 app.get("/", requireAuth, async (c) => {

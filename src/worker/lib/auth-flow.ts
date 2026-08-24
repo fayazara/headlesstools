@@ -6,19 +6,25 @@ const CODE_TTL_MS = 10 * 60 * 1000;
 const AUTH_FROM = "auth@hdls.tools";
 
 export async function sendLoginCode(
-	db: ReturnType<typeof getDb>,
 	env: Env,
 	email: string,
 	ctx: { waitUntil: (promise: Promise<unknown>) => void },
 ) {
 	const code = generateLoginCode();
 	const codeHash = await hashLoginCode(code);
-
-	await db.insert(loginCodes).values({
-		email,
-		codeHash,
-		expiresAt: new Date(Date.now() + CODE_TTL_MS),
-	});
+	const now = Date.now();
+	const id = crypto.randomUUID();
+	// D1 batch is transactional: concurrent requests leave only the newest code
+	// usable instead of accumulating several valid codes for one address.
+	await env.DB.batch([
+		env.DB.prepare("UPDATE login_codes SET consumed_at = ? WHERE email = ? AND consumed_at IS NULL").bind(
+			Math.floor(now / 1000),
+			email,
+		),
+		env.DB.prepare(
+			"INSERT INTO login_codes (id, email, code_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)",
+		).bind(id, email, codeHash, Math.floor((now + CODE_TTL_MS) / 1000), Math.floor(now / 1000)),
+	]);
 
 	// The code is already persisted, so let the page respond right away
 	// instead of blocking navigation on the outbound email round-trip.
@@ -29,8 +35,13 @@ export async function sendLoginCode(
 			subject: `${code} is your headlesstools login code`,
 			text: `Your login code is ${code}. It expires in 10 minutes.`,
 			html: `<p>Your login code is <strong>${code}</strong>. It expires in 10 minutes.</p>`,
-		}).catch((err) => console.error("sendLoginCode: email send failed", err)),
-	);
+			}).catch((error) =>
+				console.error(JSON.stringify({
+					message: "login code email send failed",
+					error: error instanceof Error ? error.message : String(error),
+				})),
+			),
+		);
 }
 
 export async function resolveAccountFromCode(db: ReturnType<typeof getDb>, email: string, code: string) {
@@ -52,11 +63,17 @@ export async function resolveAccountFromCode(db: ReturnType<typeof getDb>, email
 
 	if (!row) return null;
 
-	await db.update(loginCodes).set({ consumedAt: new Date() }).where(eq(loginCodes.id, row.id));
+	const consumed = await db
+		.update(loginCodes)
+		.set({ consumedAt: new Date() })
+		.where(and(eq(loginCodes.id, row.id), isNull(loginCodes.consumedAt), gt(loginCodes.expiresAt, new Date())))
+		.returning();
+	if (consumed.length === 0) return null;
 
 	let [account] = await db.select().from(accounts).where(eq(accounts.email, email)).limit(1);
 	if (!account) {
-		[account] = await db.insert(accounts).values({ email }).returning();
+		[account] = await db.insert(accounts).values({ email }).onConflictDoNothing().returning();
+		if (!account) [account] = await db.select().from(accounts).where(eq(accounts.email, email)).limit(1);
 	}
 
 	return account;

@@ -5,6 +5,9 @@ import { sendLoginCode, resolveAccountFromCode } from "./lib/auth-flow";
 import { checkRateLimit, clientIp } from "./lib/rate-limit";
 import { accountIdForApiKey } from "./lib/account";
 import { mcpApiHandler, type McpAuthProps } from "./mcp";
+import { hashOpaqueToken } from "./lib/keys";
+import { normalizeEmail, ValidationError } from "./lib/validation";
+import { InvalidBodyError, PayloadTooLargeError, readUrlEncodedFormWithLimit } from "./lib/body";
 
 const SCOPE = "mcp";
 
@@ -157,7 +160,15 @@ function page(title: string, body: string) {
   </script>
 </body>
 </html>`,
-		{ headers: { "content-type": "text/html; charset=utf-8" } },
+		{
+			headers: {
+				"content-type": "text/html; charset=utf-8",
+				"cache-control": "no-store",
+				"content-security-policy": "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+				"referrer-policy": "no-referrer",
+				"x-content-type-options": "nosniff",
+			},
+		},
 	);
 }
 
@@ -206,46 +217,76 @@ oauthRoutes.get("/authorize", async (c) => {
 
 // Step 2: send a login code, show the code-entry form.
 oauthRoutes.post("/authorize/code", async (c) => {
-	const body = await c.req.parseBody();
-	const qs = typeof body.qs === "string" ? body.qs : "";
-	const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+	let body: URLSearchParams;
+	try {
+		body = await readUrlEncodedFormWithLimit(c.req.raw, 32 * 1024);
+	} catch (error) {
+		if (error instanceof PayloadTooLargeError) return new Response(error.message, { status: 413 });
+		if (error instanceof InvalidBodyError) return new Response(error.message, { status: 400 });
+		throw error;
+	}
+	const qs = body.get("qs") ?? "";
+	let email = "";
 
-	if (!email || !email.includes("@")) {
-		return renderCodeStep(qs, "", "Enter a valid email address");
+	try {
+		email = normalizeEmail(body.get("email"));
+		await c.env.OAUTH_PROVIDER.parseAuthRequest(new Request(new URL(`/authorize${qs}`, c.req.url)));
+	} catch (error) {
+		if (error instanceof AuthorizationError) return errorRedirect(error);
+		if (error instanceof ValidationError) return renderCodeStep(qs, "", error.message);
+		throw error;
 	}
 
-	if (!(await checkRateLimit(c.env.LOGIN_CODE_RATE_LIMITER, clientIp(c.req.raw)))) {
+	const emailKey = await hashOpaqueToken(email);
+	const [ipAllowed, emailAllowed] = await Promise.all([
+		checkRateLimit(c.env.LOGIN_CODE_RATE_LIMITER, `ip:${clientIp(c.req.raw)}`),
+		checkRateLimit(c.env.LOGIN_CODE_RATE_LIMITER, `email:${emailKey}`),
+	]);
+	if (!ipAllowed || !emailAllowed) {
 		return renderCodeStep(qs, email, "Too many requests, try again shortly");
 	}
 
-	await sendLoginCode(getDb(c.env.DB), c.env, email, c.executionCtx);
+	await sendLoginCode(c.env, email, c.executionCtx);
 	return renderCodeStep(qs, email);
 });
 
 // Step 3: verify the code and complete the OAuth grant.
 oauthRoutes.post("/authorize/verify", async (c) => {
-	const body = await c.req.parseBody();
-	const qs = typeof body.qs === "string" ? body.qs : "";
-	const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-	const code = typeof body.code === "string" ? body.code.trim() : "";
+	let body: URLSearchParams;
+	try {
+		body = await readUrlEncodedFormWithLimit(c.req.raw, 32 * 1024);
+	} catch (error) {
+		if (error instanceof PayloadTooLargeError) return new Response(error.message, { status: 413 });
+		if (error instanceof InvalidBodyError) return new Response(error.message, { status: 400 });
+		throw error;
+	}
+	const qs = body.get("qs") ?? "";
+	let email = "";
+	const code = body.get("code")?.trim() ?? "";
 
-	if (!(await checkRateLimit(c.env.VERIFY_RATE_LIMITER, clientIp(c.req.raw)))) {
+	let authRequest: AuthRequest;
+	try {
+		email = normalizeEmail(body.get("email"));
+		if (!/^\d{6}$/.test(code)) throw new ValidationError("Enter a six-digit code");
+		authRequest = await c.env.OAUTH_PROVIDER.parseAuthRequest(new Request(new URL(`/authorize${qs}`, c.req.url)));
+	} catch (err) {
+		if (err instanceof AuthorizationError) return errorRedirect(err);
+		if (err instanceof ValidationError) return renderCodeStep(qs, email, err.message);
+		throw err;
+	}
+
+	const emailKey = await hashOpaqueToken(email);
+	const [ipAllowed, emailAllowed] = await Promise.all([
+		checkRateLimit(c.env.VERIFY_RATE_LIMITER, `ip:${clientIp(c.req.raw)}`),
+		checkRateLimit(c.env.VERIFY_RATE_LIMITER, `email:${emailKey}`),
+	]);
+	if (!ipAllowed || !emailAllowed) {
 		return renderCodeStep(qs, email, "Too many attempts, try again shortly");
 	}
 
 	const db = getDb(c.env.DB);
 	const account = await resolveAccountFromCode(db, email, code);
-	if (!account) {
-		return renderCodeStep(qs, email, "Invalid or expired code");
-	}
-
-	let authRequest: AuthRequest;
-	try {
-		authRequest = await c.env.OAUTH_PROVIDER.parseAuthRequest(new Request(new URL(`/authorize${qs}`, c.req.url)));
-	} catch (err) {
-		if (err instanceof AuthorizationError) return errorRedirect(err);
-		throw err;
-	}
+	if (!account) return renderCodeStep(qs, email, "Invalid or expired code");
 
 	const { redirectTo } = await c.env.OAUTH_PROVIDER.completeAuthorization({
 		request: authRequest,

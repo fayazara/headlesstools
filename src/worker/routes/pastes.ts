@@ -3,15 +3,21 @@ import { and, eq } from "drizzle-orm";
 import { getDb, pastes } from "../../db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireCreateRateLimit } from "../middleware/rate-limit";
-import { generateSlug } from "../lib/keys";
-import { resolvePaste } from "../lib/pastes";
+import { createPaste, PasteError, resolvePaste } from "../lib/pastes";
+import { InvalidBodyError, PayloadTooLargeError, readJsonWithLimit } from "../lib/body";
+import { MAX_PASTE_BYTES } from "../lib/quotas";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
-const INLINE_LIMIT_BYTES = 32 * 1024;
-
 app.post("/", requireAuth, requireCreateRateLimit, async (c) => {
-	const body = await c.req.json().catch(() => null);
+	let body: Record<string, unknown>;
+	try {
+		body = await readJsonWithLimit(c.req.raw, MAX_PASTE_BYTES * 2 + 64 * 1024);
+	} catch (error) {
+		if (error instanceof PayloadTooLargeError) return c.json({ error: error.message }, 413);
+		if (error instanceof InvalidBodyError) return c.json({ error: error.message }, 400);
+		throw error;
+	}
 	const content = typeof body?.content === "string" ? body.content : "";
 	const language = typeof body?.language === "string" ? body.language : undefined;
 	const requestedSlug = typeof body?.slug === "string" ? body.slug.trim() : undefined;
@@ -19,51 +25,25 @@ app.post("/", requireAuth, requireCreateRateLimit, async (c) => {
 	const visibility = body?.visibility === "private" ? "private" : "unlisted";
 	const burnAfterRead = Boolean(body?.burnAfterRead);
 
-	if (!content) {
-		return c.json({ error: "content required" }, 400);
-	}
-	if (requestedSlug && !/^[a-zA-Z0-9_-]{3,32}$/.test(requestedSlug)) {
-		return c.json({ error: "slug must be 3-32 chars, alphanumeric/_/- only" }, 400);
-	}
-
 	const db = getDb(c.env.DB);
-	const slug = requestedSlug ?? generateSlug();
-
-	if (requestedSlug) {
-		const [existing] = await db.select().from(pastes).where(eq(pastes.slug, slug)).limit(1);
-		if (existing) return c.json({ error: "slug already taken" }, 409);
-	}
-
-	const bytes = new TextEncoder().encode(content);
-	let inlineContent: string | undefined = content;
-	let r2Key: string | undefined;
-
-	if (bytes.byteLength > INLINE_LIMIT_BYTES) {
-		r2Key = `pastes/${slug}`;
-		await c.env.R2.put(r2Key, bytes);
-		inlineContent = undefined;
-	}
-
-	const [paste] = await db
-		.insert(pastes)
-		.values({
-			slug,
-			accountId: c.get("accountId"),
-			content: inlineContent,
-			r2Key,
-			sizeBytes: bytes.byteLength,
+	try {
+		const paste = await createPaste(db, c.env, c.get("accountId"), {
+			content,
 			language,
+			slug: requestedSlug,
+			expiresIn: expiresInSeconds,
 			visibility,
 			burnAfterRead,
-			expiresAt: expiresInSeconds ? new Date(Date.now() + expiresInSeconds * 1000) : undefined,
-		})
-		.returning();
-
-	const url = new URL(`/p/${paste.slug}`, c.req.url).toString();
-	return c.json(
-		{ slug: paste.slug, url, sizeBytes: paste.sizeBytes, visibility: paste.visibility, createdAt: paste.createdAt },
-		201,
-	);
+		});
+		const url = new URL(`/p/${paste.slug}`, c.req.url).toString();
+		return c.json(
+			{ slug: paste.slug, url, sizeBytes: paste.sizeBytes, visibility: paste.visibility, createdAt: paste.createdAt },
+			201,
+		);
+	} catch (error) {
+		if (error instanceof PasteError) return c.json({ error: error.message }, error.message.includes("taken") ? 409 : 400);
+		throw error;
+	}
 });
 
 app.get("/", requireAuth, async (c) => {

@@ -3,21 +3,15 @@ import { createMcpHandler } from "agents/mcp/server";
 import { z } from "zod";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb, links, pastes, inboxes, inboxMessages, files } from "../db";
-import { generateSlug } from "./lib/keys";
 import { normalizeHandle, InvalidHandleError } from "./lib/handle";
 import { checkRateLimit } from "./lib/rate-limit";
 import { sendFromInbox, SendEmailError } from "./lib/send-email";
 import { emailMe, EmailMeError } from "./lib/email-me";
 import { createUploadToken, FileUploadError } from "./lib/files";
-
-function isValidUrl(value: string): boolean {
-	try {
-		const u = new URL(value);
-		return u.protocol === "http:" || u.protocol === "https:";
-	} catch {
-		return false;
-	}
-}
+import { createLink, LinkError } from "./lib/links";
+import { createPaste, PasteError, resolvePaste } from "./lib/pastes";
+import { PayloadTooLargeError, readBodyWithLimit } from "./lib/body";
+import { isUniqueConstraintError } from "./lib/validation";
 
 const RATE_LIMIT_ERROR = { content: [{ type: "text" as const, text: "Error: rate limit exceeded, try again shortly" }], isError: true };
 
@@ -31,31 +25,20 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 			description: "Create a short link for a URL",
 			inputSchema: z.object({
 				url: z.string().describe("The destination URL"),
-				slug: z.string().min(3).max(32).optional().describe("Custom slug (optional)"),
-				expiresIn: z.number().optional().describe("Seconds until the link expires"),
+				slug: z.string().regex(/^[a-zA-Z0-9_-]{3,32}$/).optional().describe("Custom slug (optional)"),
+				expiresIn: z.number().int().positive().max(365 * 24 * 60 * 60).optional().describe("Seconds until the link expires"),
 			}),
 		},
-		async ({ url, slug, expiresIn }) => {
-			if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
-			if (!isValidUrl(url)) {
-				return { content: [{ type: "text", text: "Error: valid http(s) url required" }], isError: true };
-			}
-			const finalSlug = slug ?? generateSlug();
-			if (slug) {
-				const [existing] = await db.select().from(links).where(eq(links.slug, slug)).limit(1);
-				if (existing) return { content: [{ type: "text", text: "Error: slug already taken" }], isError: true };
-			}
-			const [link] = await db
-				.insert(links)
-				.values({
-					slug: finalSlug,
-					targetUrl: url,
-					accountId,
-					expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined,
-				})
-				.returning();
-			const shortUrl = new URL(`/${link.slug}`, baseUrl).toString();
-			return { content: [{ type: "text", text: JSON.stringify({ slug: link.slug, shortUrl, targetUrl: link.targetUrl }) }] };
+			async ({ url, slug, expiresIn }) => {
+				if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
+				try {
+					const link = await createLink(db, accountId, { url, slug, expiresIn });
+					const shortUrl = new URL(`/${link.slug}`, baseUrl).toString();
+					return { content: [{ type: "text", text: JSON.stringify({ slug: link.slug, shortUrl, targetUrl: link.targetUrl }) }] };
+				} catch (error) {
+					const message = error instanceof LinkError ? error.message : "failed to create link";
+					return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+				}
 		},
 	);
 
@@ -75,44 +58,22 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 			inputSchema: z.object({
 				content: z.string().describe("The text content"),
 				language: z.string().optional(),
-				slug: z.string().min(3).max(32).optional(),
+				slug: z.string().regex(/^[a-zA-Z0-9_-]{3,32}$/).optional(),
 				visibility: z.enum(["unlisted", "private"]).optional(),
 				burnAfterRead: z.boolean().optional().describe("Delete after first read"),
-				expiresIn: z.number().optional().describe("Seconds until the paste expires"),
+				expiresIn: z.number().int().positive().max(365 * 24 * 60 * 60).optional().describe("Seconds until the paste expires"),
 			}),
 		},
-		async ({ content, language, slug, visibility, burnAfterRead, expiresIn }) => {
-			if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
-			const finalSlug = slug ?? generateSlug();
-			if (slug) {
-				const [existing] = await db.select().from(pastes).where(eq(pastes.slug, slug)).limit(1);
-				if (existing) return { content: [{ type: "text", text: "Error: slug already taken" }], isError: true };
-			}
-			const bytes = new TextEncoder().encode(content);
-			let inlineContent: string | undefined = content;
-			let r2Key: string | undefined;
-			const INLINE_LIMIT_BYTES = 32 * 1024;
-			if (bytes.byteLength > INLINE_LIMIT_BYTES) {
-				r2Key = `pastes/${finalSlug}`;
-				await env.R2.put(r2Key, bytes);
-				inlineContent = undefined;
-			}
-			const [paste] = await db
-				.insert(pastes)
-				.values({
-					slug: finalSlug,
-					accountId,
-					content: inlineContent,
-					r2Key,
-					sizeBytes: bytes.byteLength,
-					language,
-					visibility: visibility ?? "unlisted",
-					burnAfterRead: burnAfterRead ?? false,
-					expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined,
-				})
-				.returning();
-			const url = new URL(`/p/${paste.slug}`, baseUrl).toString();
-			return { content: [{ type: "text", text: JSON.stringify({ slug: paste.slug, url, sizeBytes: paste.sizeBytes }) }] };
+			async ({ content, language, slug, visibility, burnAfterRead, expiresIn }) => {
+				if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
+				try {
+					const paste = await createPaste(db, env, accountId, { content, language, slug, visibility, burnAfterRead, expiresIn });
+					const url = new URL(`/p/${paste.slug}`, baseUrl).toString();
+					return { content: [{ type: "text", text: JSON.stringify({ slug: paste.slug, url, sizeBytes: paste.sizeBytes }) }] };
+				} catch (error) {
+					const message = error instanceof PasteError ? error.message : "failed to create paste";
+					return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+				}
 		},
 	);
 
@@ -123,19 +84,12 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 			inputSchema: z.object({ slug: z.string() }),
 		},
 		async ({ slug }) => {
-			const [paste] = await db.select().from(pastes).where(eq(pastes.slug, slug)).limit(1);
-			if (!paste || (paste.expiresAt && paste.expiresAt.getTime() < Date.now())) {
-				return { content: [{ type: "text", text: "Error: not found" }], isError: true };
-			}
-			if (paste.visibility === "private" && paste.accountId !== accountId) {
-				return { content: [{ type: "text", text: "Error: not found" }], isError: true };
-			}
-			const content = paste.content ?? (paste.r2Key ? await (await env.R2.get(paste.r2Key))?.text() : undefined);
-			if (paste.burnAfterRead) {
-				if (paste.r2Key) await env.R2.delete(paste.r2Key);
-				await db.delete(pastes).where(eq(pastes.id, paste.id));
-			}
-			return { content: [{ type: "text", text: JSON.stringify({ slug: paste.slug, content, language: paste.language }) }] };
+				const result = await resolvePaste(db, env, slug, null, accountId);
+				if (result === "not_found") {
+					return { content: [{ type: "text", text: "Error: not found" }], isError: true };
+				}
+				const { paste, content } = result;
+				return { content: [{ type: "text", text: JSON.stringify({ slug: paste.slug, content, language: paste.language }) }] };
 		},
 	);
 
@@ -193,7 +147,7 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 				const [inbox] = await db.insert(inboxes).values({ address, accountId }).returning();
 				return { content: [{ type: "text", text: JSON.stringify(inbox) }] };
 			} catch (err) {
-				const taken = err instanceof Error && /UNIQUE constraint failed/.test(err.message);
+				const taken = isUniqueConstraintError(err);
 				return { content: [{ type: "text", text: taken ? "Error: handle already taken" : "Error: failed to create inbox" }], isError: true };
 			}
 		},
@@ -210,9 +164,10 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 				text: z.string().optional(),
 				html: z.string().optional(),
 				replyToMessageId: z.string().optional().describe("id of a received message to thread this reply to"),
+				idempotencyKey: z.string().regex(/^[A-Za-z0-9._:-]{8,128}$/).optional().describe("Stable key to make retries safe"),
 			}),
 		},
-		async ({ inboxId, to, subject, text, html, replyToMessageId }) => {
+			async ({ inboxId, to, subject, text, html, replyToMessageId, idempotencyKey }) => {
 			const [inbox] = await db
 				.select()
 				.from(inboxes)
@@ -225,7 +180,7 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 			if (!(await checkRateLimit(env.SEND_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
 
 			try {
-				const sent = await sendFromInbox(db, env, inbox.id, { inboxAddress: inbox.address, to, subject, text, html, replyToMessageId });
+					const sent = await sendFromInbox(db, env, accountId, inbox.id, { inboxAddress: inbox.address, to, subject, text, html, replyToMessageId, idempotencyKey });
 				return { content: [{ type: "text", text: JSON.stringify(sent) }] };
 			} catch (err) {
 				const message = err instanceof SendEmailError ? err.message : "failed to send";
@@ -310,9 +265,10 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 				text: z.string().optional(),
 				html: z.string().optional(),
 				at: z.string().optional().describe("ISO 8601 timestamp to send at; omit to send immediately"),
+				idempotencyKey: z.string().regex(/^[A-Za-z0-9._:-]{8,128}$/).optional().describe("Stable key to make retries safe"),
 			}),
 		},
-		async ({ subject, text, html, at }) => {
+			async ({ subject, text, html, at, idempotencyKey }) => {
 			if (!(await checkRateLimit(env.SEND_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
 
 			const atDate = at ? new Date(at) : undefined;
@@ -321,7 +277,7 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 			}
 
 			try {
-				const row = await emailMe(db, env, accountId, { subject, text, html, at: atDate });
+					const row = await emailMe(db, env, accountId, { subject, text, html, at: atDate, idempotencyKey });
 				return { content: [{ type: "text", text: JSON.stringify(row) }] };
 			} catch (err) {
 				const message = err instanceof EmailMeError ? err.message : "failed to email";
@@ -340,14 +296,14 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 			inputSchema: z.object({
 				filename: z.string(),
 				contentType: z.string().optional().describe("MIME type, e.g. image/png"),
-				slug: z.string().min(3).max(32).optional(),
-				expiresIn: z.number().optional().describe("Seconds until the file expires"),
+				slug: z.string().regex(/^[a-zA-Z0-9_-]{3,32}$/).optional(),
+				expiresIn: z.number().int().positive().max(365 * 24 * 60 * 60).optional().describe("Seconds until the file expires"),
 			}),
 		},
 		async ({ filename, contentType, slug, expiresIn }) => {
 			if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
 			try {
-				const { token, expiresAt } = await createUploadToken(env, accountId, { filename, contentType, slug, expiresIn });
+					const { token, expiresAt } = await createUploadToken(db, accountId, { filename, contentType, slug, expiresIn });
 				const uploadUrl = new URL(`/v1/files/upload/${token}`, baseUrl).toString();
 				return { content: [{ type: "text", text: JSON.stringify({ uploadUrl, expiresAt }) }] };
 			} catch (err) {
@@ -403,6 +359,18 @@ type McpExecutionContext = Parameters<ReturnType<typeof createMcpHandler>>[2];
 // before this handler ever runs.
 export const mcpApiHandler = {
 	async fetch(request: Request, env: Env, ctx: McpExecutionContext): Promise<Response> {
+		try {
+			if (request.body) {
+				const body = await readBodyWithLimit(request, 2 * 1024 * 1024);
+				request = new Request(request, { body });
+			}
+		} catch (error) {
+			if (!(error instanceof PayloadTooLargeError)) throw error;
+			return new Response(JSON.stringify({ error: "MCP request body too large" }), {
+				status: 413,
+				headers: { "content-type": "application/json" },
+			});
+		}
 		const props = (ctx as { props?: McpAuthProps }).props;
 		if (!props?.accountId) {
 			return new Response(JSON.stringify({ error: "unauthenticated" }), {

@@ -7,7 +7,7 @@
 	"name": "headlesstools",
 	"main": "./src/worker/index.ts",
 	"account_id": "7e259235995e0f3d11b31545743b30a3",
-	"compatibility_date": "2025-10-08",
+	"compatibility_date": "2026-08-24",
 	"compatibility_flags": [
 		"nodejs_compat",
 		"global_fetch_strictly_public"

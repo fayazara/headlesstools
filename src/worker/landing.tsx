@@ -28,7 +28,7 @@ const FEATURES = [
   {
     name: "file sharing",
     cmd: "create_file",
-    desc: "upload a file, get back a public url. screenshots, reports, logs - anything an agent can't host on its own.",
+    desc: "get a one-time upload url for up to 10mb, then get back a public link. screenshots, reports, logs - anything an agent can't host on its own.",
   },
 ];
 
@@ -110,6 +110,14 @@ Or use the REST API directly:
 ${DOC_SNIPPETS.rest(origin)}
 \`\`\`
 
+## Limits and retry safety
+
+- 1,000 links, 500 pastes, and 100 files per account.
+- Pastes are capped at 1MB. Files are capped at 10MB each and 500MB total.
+- Upload URLs expire after 10 minutes and are single-use.
+- Outbound email is capped at 100 messages per UTC day. Inbox messages are retained for 30 days.
+- Use a stable \`Idempotency-Key\` header (or MCP \`idempotencyKey\`) when retrying email sends.
+
 ---
 
 headlesstools - mcp-first tools for ai agents
@@ -125,7 +133,7 @@ function terminalScript(origin: string) {
     var script = [
       { type: "user", text: "can you shorten this url for me blog.cloudflare.com/task-based-oauth-consent" },
       { type: "tool", text: "Called headlesstools" },
-      { type: "assistant", text: "Here's your shortened url: ${origin}/c93ba" },
+      { type: "assistant", text: "Here's your shortened url: ${origin}/c93ba8kq7v2m4x6t9w3n5j7r2z" },
       { type: "user", text: 'can you email me in 1 hour saying "reminder to check that blog post"' },
       { type: "tool", text: "Called headlesstools" },
       { type: "assistant", text: "Scheduled - an email will go to fayaz@acme.org in 1 hour." },
@@ -134,7 +142,7 @@ function terminalScript(origin: string) {
       { type: "assistant", text: "788 clicks so far." },
       { type: "user", text: "can you upload this and give me a link [Image #1]" },
       { type: "tool", text: "Called headlesstools" },
-      { type: "assistant", text: "Uploaded - here's your file: ${origin}/f/8h3kq" },
+      { type: "assistant", text: "Uploaded - here's your file: ${origin}/f/8h3kq7v2m4x6t9w3n5j7r2z8c" },
     ];
 
     function linkify(text) {

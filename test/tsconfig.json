@@ -1,0 +1,8 @@
+{
+	"extends": "../tsconfig.worker.json",
+	"compilerOptions": {
+		"moduleResolution": "bundler",
+		"types": ["@cloudflare/vitest-plugin/types", "vite/client", "../worker-configuration.d.ts"]
+	},
+	"include": ["./**/*.ts", "../src/worker", "../worker-configuration.d.ts"]
+}

@@ -3,6 +3,9 @@ import { getDb } from "../../db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { checkRateLimit } from "../lib/rate-limit";
 import { emailMe, EmailMeError } from "../lib/email-me";
+import { InvalidBodyError, PayloadTooLargeError, readJsonWithLimit } from "../lib/body";
+import { normalizeIdempotencyKey, ValidationError } from "../lib/validation";
+import { MAX_EMAIL_CONTENT_BYTES } from "../lib/email-validation";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
@@ -11,7 +14,14 @@ app.post("/", requireAuth, async (c) => {
 		return c.json({ error: "rate limit exceeded, try again shortly" }, 429);
 	}
 
-	const body = await c.req.json().catch(() => null);
+	let body: Record<string, unknown>;
+	try {
+		body = await readJsonWithLimit(c.req.raw, MAX_EMAIL_CONTENT_BYTES + 64 * 1024);
+	} catch (error) {
+		if (error instanceof PayloadTooLargeError) return c.json({ error: error.message }, 413);
+		if (error instanceof InvalidBodyError) return c.json({ error: error.message }, 400);
+		throw error;
+	}
 	const subject = typeof body?.subject === "string" ? body.subject : "";
 	const text = typeof body?.text === "string" ? body.text : undefined;
 	const html = typeof body?.html === "string" ? body.html : undefined;
@@ -25,9 +35,11 @@ app.post("/", requireAuth, async (c) => {
 	}
 
 	try {
-		const row = await emailMe(getDb(c.env.DB), c.env, c.get("accountId"), { subject, text, html, at });
+		const idempotencyKey = normalizeIdempotencyKey(c.req.header("idempotency-key") ?? body.idempotencyKey);
+		const row = await emailMe(getDb(c.env.DB), c.env, c.get("accountId"), { subject, text, html, at, idempotencyKey });
 		return c.json(row, 201);
 	} catch (err) {
+		if (err instanceof ValidationError) return c.json({ error: err.message }, 400);
 		if (err instanceof EmailMeError) return c.json({ error: err.message }, 400);
 		throw err;
 	}

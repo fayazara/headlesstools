@@ -122,6 +122,18 @@ Short links resolve at the bare root (`hdls.tools/:slug`), paste content is serv
 
 The homepage also returns a markdown rendition when requested with `Accept: text/markdown`, for agents that would rather not parse HTML.
 
+### Limits and retry safety
+
+- Links: 1,000 per account.
+- Pastes: 500 per account, 1MB each.
+- Files: 100 per account, 500MB total, 10MB each. Upload URLs expire after 10 minutes and can be used only once.
+- Email: 100 outbound messages per UTC day and 256KB of text/HTML per message.
+- Inbox: 1,000 inbound messages and 250MB of raw mail per inbox. Individual inbound messages are capped at 5MB and messages are retained for 30 days.
+
+For `POST /v1/inboxes/:id/send` and `POST /v1/email-me`, send a stable `Idempotency-Key` header (8–128 URL-safe characters) when retrying. The MCP `send_email` and `email_me` tools accept the same value as `idempotencyKey`.
+
+Uploaded HTML, SVG, and other active content is served as a download. Only a small allowlist of inert image formats and plain text is displayed inline.
+
 ## Stack
 
 - [Hono](https://hono.dev/) on [Cloudflare Workers](https://developers.cloudflare.com/workers/) — REST API, MCP server, and the server-rendered (Hono JSX) landing page
@@ -159,8 +171,11 @@ The IDs in `wrangler.json` (D1 database, R2 bucket, KV namespace, custom domain)
 ## Deploy
 
 ```bash
+pnpm db:migrate:remote
 pnpm run build
 pnpm run deploy
 ```
+
+Apply D1 migrations before publishing a Worker version that depends on them. The migration is backward-compatible with the previous Worker, so this order avoids a schema/code mismatch during rollout.
 
 `pnpm run check` type-checks, builds, and does a dry-run deploy without publishing.

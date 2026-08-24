@@ -8,7 +8,7 @@ import { normalizeHandle, InvalidHandleError } from "./lib/handle";
 import { checkRateLimit } from "./lib/rate-limit";
 import { sendFromInbox, SendEmailError } from "./lib/send-email";
 import { emailMe, EmailMeError } from "./lib/email-me";
-import { createFileFromBase64, FileUploadError } from "./lib/files";
+import { createUploadToken, FileUploadError } from "./lib/files";
 
 function isValidUrl(value: string): boolean {
 	try {
@@ -333,22 +333,25 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 	server.registerTool(
 		"create_file",
 		{
-			description: "Upload a file (base64-encoded content) and get back a public, directly-linkable URL. Max 1MB.",
+			description:
+				"Get a one-time upload URL for a file, up to 10MB. This tool does not take file content — it returns an uploadUrl valid for 10 minutes. " +
+				"To finish the upload, PUT the raw file bytes to that URL (e.g. `curl -T /path/to/file '<uploadUrl>'`), no encoding or auth header needed. " +
+				"The final response from that PUT contains the public, directly-linkable file URL.",
 			inputSchema: z.object({
-				content: z.string().describe("Base64-encoded file content"),
 				filename: z.string(),
 				contentType: z.string().optional().describe("MIME type, e.g. image/png"),
 				slug: z.string().min(3).max(32).optional(),
 				expiresIn: z.number().optional().describe("Seconds until the file expires"),
 			}),
 		},
-		async ({ content, filename, contentType, slug, expiresIn }) => {
+		async ({ filename, contentType, slug, expiresIn }) => {
 			if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
 			try {
-				const file = await createFileFromBase64(db, env, accountId, { content, filename, contentType, slug, expiresIn }, baseUrl);
-				return { content: [{ type: "text", text: JSON.stringify(file) }] };
+				const { token, expiresAt } = await createUploadToken(env, accountId, { filename, contentType, slug, expiresIn });
+				const uploadUrl = new URL(`/v1/files/upload/${token}`, baseUrl).toString();
+				return { content: [{ type: "text", text: JSON.stringify({ uploadUrl, expiresAt }) }] };
 			} catch (err) {
-				const message = err instanceof FileUploadError ? err.message : "failed to upload";
+				const message = err instanceof FileUploadError ? err.message : "failed to prepare upload";
 				return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
 			}
 		},

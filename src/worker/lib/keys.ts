@@ -36,6 +36,10 @@ export async function hashLoginCode(code: string): Promise<string> {
 	return sha256Hex(code);
 }
 
+export function generateUploadToken(): string {
+	return randomToken(24);
+}
+
 export function generateSlug(bytes = 5): string {
 	// base32-ish, unambiguous alphabet (no 0/O/1/I/L)
 	const alphabet = "23456789abcdefghjkmnpqrstuvwxyz";

@@ -18,7 +18,7 @@ https://github.com/user-attachments/assets/a6846cd4-9524-4a0a-8ca3-4e5464a02f30
 - **Pastebin** (`create_paste`) — share text/code snippets with a link. private, unlisted, or burn-after-read.
 - **Mailbox** (`create_inbox`) — claim a real `handle@hdls.tools` address. read OTPs and webhooks, send and receive, threaded replies. one per account.
 - **Email me** (`email_me`) — email yourself right now, or schedule it for a future timestamp.
-- **File sharing** (`create_file`) — upload a file, get back a public URL. up to 1MB via base64/MCP, up to 5MB via raw-body REST upload.
+- **File sharing** (`create_file`) — get a one-time upload URL, PUT the raw file to it, get back a public link. up to 10MB, no base64 anywhere.
 
 ## Connect via MCP
 
@@ -75,7 +75,7 @@ opencode mcp auth headlesstools
 | `list_inbox_messages` | List messages received in an inbox |
 | `get_inbox_message` | Fetch the full content of a received email |
 | `email_me` | Email the account owner's own verified address, now or at a future time |
-| `create_file` | Upload a file (base64-encoded) and get back a public URL. Max 1MB — for bigger files, use `PUT /v1/files` over REST |
+| `create_file` | Get a one-time upload URL (valid 10 min); PUT the raw file to it to finish. Max 10MB, no base64 |
 | `list_files` | List your uploaded files |
 | `delete_file` | Delete an uploaded file |
 
@@ -92,11 +92,21 @@ curl -X POST https://hdls.tools/v1/links -H "authorization: Bearer hlt_live_..."
   -d '{"url":"https://example.com"}'
 ```
 
-Uploading a file from disk? Send the raw bytes as the request body instead of base64 — no shell argument-length limits, no 33% inflation:
+Uploading a file from disk? Send the raw bytes as the request body — never base64. If you already have an API key, do it in one call:
 
 ```bash
 curl -T ./photo.png -H "authorization: Bearer hlt_live_..." \
   "https://hdls.tools/v1/files?filename=photo.png"
+```
+
+No API key handy (e.g. an MCP-connected agent)? Two steps: request an upload URL, then PUT the file to it — the URL itself is the one-time credential, valid for 10 minutes:
+
+```bash
+curl -X POST https://hdls.tools/v1/files -H "authorization: Bearer hlt_live_..." \
+  -d '{"filename":"photo.png"}'
+# => {"uploadUrl":"https://hdls.tools/v1/files/upload/<token>","expiresAt":"..."}
+
+curl -T ./photo.png "https://hdls.tools/v1/files/upload/<token>"
 ```
 
 | Resource | Endpoints |
@@ -106,7 +116,7 @@ curl -T ./photo.png -H "authorization: Bearer hlt_live_..." \
 | `/v1/pastes` | `POST /`, `GET /`, `GET /:slug`, `DELETE /:slug` |
 | `/v1/inboxes` | `POST /`, `GET /`, `GET /:id`, `POST /:id/send`, `GET /:id/messages/:messageId`, `DELETE /:id` |
 | `/v1/email-me` | `POST /` |
-| `/v1/files` | `POST /` (JSON, base64, max 1MB), `PUT /` (raw body, max 5MB), `GET /`, `DELETE /:slug` |
+| `/v1/files` | `POST /` (mint an upload token), `PUT /upload/:token` (finish it), `PUT /` (one-shot raw upload with API key), `GET /`, `DELETE /:slug`. All uploads are raw bytes, max 10MB |
 
 Short links resolve at the bare root (`hdls.tools/:slug`), paste content is served raw at `/p/:slug`, and uploaded files at `/f/:slug`.
 

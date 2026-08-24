@@ -3,26 +3,41 @@ import { and, eq } from "drizzle-orm";
 import { getDb, files } from "../../db";
 import { requireAuth, type AuthVariables } from "../middleware/auth";
 import { requireCreateRateLimit } from "../middleware/rate-limit";
-import { createFileFromBase64, createFileFromBytes, FileUploadError } from "../lib/files";
+import { checkRateLimit, clientIp } from "../lib/rate-limit";
+import { createFileFromBytes, createUploadToken, finalizeUpload, FileUploadError } from "../lib/files";
 
 const app = new Hono<{ Bindings: Env; Variables: AuthVariables }>();
 
+// Mints a short-lived, single-use upload token — no file bytes here, just
+// metadata. Whoever holds the token PUTs the raw file to /upload/:token.
 app.post("/", requireAuth, requireCreateRateLimit, async (c) => {
 	const body = await c.req.json().catch(() => null);
-	const content = typeof body?.content === "string" ? body.content : "";
 	const filename = typeof body?.filename === "string" ? body.filename : "";
 	const contentType = typeof body?.contentType === "string" ? body.contentType : undefined;
 	const slug = typeof body?.slug === "string" ? body.slug.trim() : undefined;
 	const expiresIn = typeof body?.expiresIn === "number" ? body.expiresIn : undefined;
 
 	try {
-		const file = await createFileFromBase64(
-			getDb(c.env.DB),
-			c.env,
-			c.get("accountId"),
-			{ content, filename, contentType, slug, expiresIn },
-			c.req.url,
-		);
+		const { token, expiresAt } = await createUploadToken(c.env, c.get("accountId"), { filename, contentType, slug, expiresIn });
+		const uploadUrl = new URL(`/v1/files/upload/${token}`, c.req.url).toString();
+		return c.json({ uploadUrl, expiresAt }, 201);
+	} catch (err) {
+		if (err instanceof FileUploadError) return c.json({ error: err.message }, 400);
+		throw err;
+	}
+});
+
+// No requireAuth here — the token itself is the one-time credential, so any
+// client holding it (e.g. an agent with local file access but no API key) can
+// complete the upload with a plain, unauthenticated PUT of the raw bytes.
+app.put("/upload/:token", async (c) => {
+	if (!(await checkRateLimit(c.env.CREATE_RATE_LIMITER, clientIp(c.req.raw)))) {
+		return c.json({ error: "rate limit exceeded, try again shortly" }, 429);
+	}
+
+	const buf = await c.req.arrayBuffer();
+	try {
+		const file = await finalizeUpload(getDb(c.env.DB), c.env, c.req.param("token"), new Uint8Array(buf), c.req.url);
 		return c.json(file, 201);
 	} catch (err) {
 		if (err instanceof FileUploadError) return c.json({ error: err.message }, 400);

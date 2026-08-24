@@ -20,11 +20,13 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use("*", async (c, next) => {
 	await next();
-	c.res.headers.set("x-content-type-options", "nosniff");
-	c.res.headers.set("referrer-policy", "strict-origin-when-cross-origin");
-	c.res.headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
+	// Use Hono's header API so it can clone immutable platform responses such as
+	// Response.redirect(), which is how a successful OAuth verification ends.
+	c.header("x-content-type-options", "nosniff");
+	c.header("referrer-policy", "strict-origin-when-cross-origin");
+	c.header("permissions-policy", "camera=(), microphone=(), geolocation=()");
 	if (new URL(c.req.url).pathname.startsWith("/v1/") && !c.res.headers.has("cache-control")) {
-		c.res.headers.set("cache-control", "no-store");
+		c.header("cache-control", "no-store");
 	}
 });
 

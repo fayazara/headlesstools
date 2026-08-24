@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { getDb } from "../src/db";
 import { claimUploadToken, createFileFromBytes, createUploadToken } from "../src/worker/lib/files";
@@ -15,6 +16,63 @@ async function seedAccount(id: string, email: string) {
 }
 
 describe("security-sensitive workflows", () => {
+	it("completes the browser OTP flow with an OAuth authorization grant", async () => {
+		const registration = await SELF.fetch("https://hdls.tools/oauth/register", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				client_name: "OAuth integration test",
+				redirect_uris: ["https://example.com/oauth/callback"],
+				grant_types: ["authorization_code"],
+				response_types: ["code"],
+				token_endpoint_auth_method: "none",
+			}),
+		});
+		expect(registration.status).toBe(201);
+		const client = await registration.json<{ client_id: string }>();
+
+		const verifier = "oauth-integration-verifier-012345678901234567890123456789";
+		const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+		const challenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+			.replaceAll("+", "-")
+			.replaceAll("/", "_")
+			.replace(/=+$/, "");
+		const query = new URLSearchParams({
+			client_id: client.client_id,
+			redirect_uri: "https://example.com/oauth/callback",
+			response_type: "code",
+			code_challenge: challenge,
+			code_challenge_method: "S256",
+			scope: "mcp",
+			state: "integration-state",
+		});
+		const authorize = await SELF.fetch(`https://hdls.tools/authorize?${query}`);
+		expect(authorize.status).toBe(200);
+
+		const email = `${crypto.randomUUID()}@example.com`;
+		const code = "123456";
+		const now = Math.floor(Date.now() / 1000);
+		await env.DB.prepare(
+			"INSERT INTO login_codes (id, email, code_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)",
+		)
+			.bind(crypto.randomUUID(), email, await hashLoginCode(code), now + 600, now)
+			.run();
+
+		const verify = await SELF.fetch("https://hdls.tools/authorize/verify", {
+			method: "POST",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({ qs: `?${query}`, email, code }),
+			redirect: "manual",
+		});
+		expect(verify.status).toBe(302);
+		expect(verify.headers.get("x-content-type-options")).toBe("nosniff");
+		expect(verify.headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
+		const redirect = new URL(verify.headers.get("location")!);
+		expect(redirect.origin + redirect.pathname).toBe("https://example.com/oauth/callback");
+		expect(redirect.searchParams.get("code")).toBeTruthy();
+		expect(redirect.searchParams.get("state")).toBe("integration-state");
+	});
+
 	it("generates non-enumerable default slugs and rejects reserved root slugs", () => {
 		const slugs = new Set(Array.from({ length: 256 }, () => generateSlug()));
 		expect(slugs.size).toBe(256);

@@ -1,0 +1,21 @@
+src/worker/oauth.ts
+  s_31735a1924af5a::t_8c966f493ededc 167-170
+test/security-workflows.test.ts
+  s_31735a1924af5a::t_05f8ad94195677 51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "07bcc2bfb0bc93385427b604bd5de1a00fb8e7ad",
+  "prompts": {},
+  "sessions": {
+    "s_31735a1924af5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a032fb-515c-73e0-b096-4a2825a5f0e2",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

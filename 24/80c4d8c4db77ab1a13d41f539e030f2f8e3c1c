@@ -1,0 +1,93 @@
+migrations/0006_wakeful_naoko.sql
+  s_31735a1924af5a::t_5924a224f7ec7d 1-21
+migrations/meta/0006_snapshot.json
+  s_31735a1924af5a::t_ae0a762ad1ae22 1-927
+migrations/meta/_journal.json
+  s_31735a1924af5a::t_ff780a5ee24117 39-45
+pnpm-lock.yaml
+  s_31735a1924af5a::t_cee674d706a366 7-9,27-28,48-50,96-98,302-308,1410-1412,1515-1520,1618-1646,1730-1733,1785-1788,1799-1801,2019-2021,2101-2103,2123-2126,2262-2263,2770-2772,2787-2789,2794-2796,2831-2837,2842-2845,2975-3015,3021-3025,3362-3376,3424,3714,3716,3880,3890,4101-4102,4192-4198,4333-4373,4440-4441,4499-4500,4510-4511,4611-4612,4791-4794,4807-4808,4972,5522-5523,5535-5536,5539-5540,5573-5576,5582-5583,5695-5721,5726-5730
+worker-configuration.d.ts
+  s_31735a1924af5a::t_dcf36a8773da71 3,452,560,1328,1677,3508,3514,3672,3975,4544,4546,4596,10359-10360,10467,10495,10612
+README.md
+  s_31735a1924af5a::t_8085292b32ff1d 125-136,174,179-180
+package.json
+  s_31735a1924af5a::t_88ef6ea6e9e38b 9,18,34,39-45,55
+src/db/schema.ts
+  s_31735a1924af5a::t_12042c90b5cbfc 1,97-98,102,134-140,143-155
+src/worker/cleanup.ts
+  s_31735a1924af5a::t_24fa403aca0d66 1-5,16-17,20,26-27,30-43,45
+src/worker/email.ts
+  s_31735a1924af5a::t_1af332a9d708fa 4,22-23,26-38,44-64
+src/worker/index.ts
+  s_31735a1924af5a::t_21cba628065940 17,21-30,59-76
+src/worker/landing.tsx
+  s_31735a1924af5a::t_bd3e36dd45687e 31,113-120,136,145
+src/worker/lib/auth-flow.ts
+  s_31735a1924af5a::t_70596cb7f48883 15-27,38-44,66-71,75-76
+src/worker/lib/body.ts
+  s_31735a1924af5a::t_b439f9836a9b9e 1-63
+src/worker/lib/email-me.ts
+  s_31735a1924af5a::t_c633033716febe 1,3-5,9,16,25-31,33-40,42-45,53-54,57-64,68-72,76-118,121,123-131,133
+src/worker/lib/email-validation.ts
+  s_31735a1924af5a::t_33038512cefd73 1-30
+src/worker/lib/files.ts
+  s_31735a1924af5a::t_795b55a30df750 1-5,8-10,21-32,35-38,40-54,57-62,64-92,103,106-123,128-130,133-170,172
+src/worker/lib/keys.ts
+  s_31735a1924af5a::t_3ca68166b07a24 2-4,33-36,50-62,65-76
+src/worker/lib/links.ts
+  s_31735a1924af5a::t_439cdea04f2cbb 1-59
+src/worker/lib/pastes.ts
+  s_31735a1924af5a::t_7e02c09c19623f 2-19,26-87,95,97-99,101,103-104,107-111,114-116
+src/worker/lib/quotas.ts
+  s_31735a1924af5a::t_6fb131f623c009 1-85
+src/worker/lib/send-email.ts
+  s_31735a1924af5a::t_125ab4202eadea 1,3-5,14,23-31,33-34,39,41,48-85,87-92,94-99,101,103-127
+src/worker/lib/validation.ts
+  s_31735a1924af5a::t_06a1622495fb87 1-53
+src/worker/mcp.ts
+  s_31735a1924af5a::t_7ca2a11cb579ff 11-14,28-29,32-41,61,64,67-76,87-92,150,167,170,183,268,271,280,299-300,306,362-373
+src/worker/oauth.ts
+  s_31735a1924af5a::t_c7268bc8d32836 8-10,163-171,220-229,231-237,240-245,249,255-261,263-265,269-270,274,278-290
+src/worker/routes/auth.ts
+  s_31735a1924af5a::t_1535809bd83a66 8-10,15-22,25-30,34,39-49,52-57,75,97-107,118
+src/worker/routes/email-me.ts
+  s_31735a1924af5a::t_5fa937c8c34144 6-8,17-24,38-39,42
+src/worker/routes/file-raw.ts
+  s_31735a1924af5a::t_fbbed7cab323d9 7-21,29-30,35-39
+src/worker/routes/files.ts
+  s_31735a1924af5a::t_287b0e25dfed68 7-21,28-35,42,60-65,68-69,90,95,101-102
+src/worker/routes/inboxes.ts
+  s_31735a1924af5a::t_e9eaf7d1e5508b 9-11,16-23,64,117-124,131,136-145,148
+src/worker/routes/links.ts
+  s_31735a1924af5a::t_14ed98e32e51a5 6-7,12-18,20-25,27-31
+src/worker/routes/pastes.ts
+  s_31735a1924af5a::t_493049397e51a7 6-8,13-20,29-31,33-34,37-46
+test/apply-migrations.ts
+  s_31735a1924af5a::t_d3904682cb2ab8 1-7
+test/env.d.ts
+  s_31735a1924af5a::t_82178568135747 1-5
+test/security-workflows.test.ts
+  s_31735a1924af5a::t_8169f5f136f236 1-158
+test/tsconfig.json
+  s_31735a1924af5a::t_ef29d7c768adf7 1-8
+vitest.config.ts
+  s_31735a1924af5a::t_4fe8c30dcdaf3a 1-19
+wrangler.json
+  s_31735a1924af5a::t_645a1e2b4e0bf9 10,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2480c4d8c4db77ab1a13d41f539e030f2f8e3c1c",
+  "prompts": {},
+  "sessions": {
+    "s_31735a1924af5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a032fb-515c-73e0-b096-4a2825a5f0e2",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

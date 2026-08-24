@@ -2,24 +2,32 @@ import { and, eq, isNull, or, gt } from "drizzle-orm";
 import { files, type Db } from "../../db";
 import { generateSlug } from "./keys";
 
-export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+// Hard cap for raw-body uploads (PUT /v1/files), where bytes are streamed
+// straight from disk and never inflated into text.
+export const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+// Lower cap for base64-encoded uploads (MCP create_file, JSON body), since
+// those bytes have to sit as text in a tool call or request body — a 5MB
+// file would already be ~6.7MB of base64.
+export const MAX_BASE64_FILE_BYTES = 1 * 1024 * 1024;
 
 export class FileUploadError extends Error {}
 
 export type CreateFileInput = {
-	content: string; // base64
 	filename: string;
 	contentType?: string;
 	slug?: string;
 	expiresIn?: number;
 };
 
-export async function createFile(db: Db, env: Env, accountId: string, input: CreateFileInput, baseUrl: string) {
+export async function createFileFromBase64(
+	db: Db,
+	env: Env,
+	accountId: string,
+	input: CreateFileInput & { content: string },
+	baseUrl: string,
+) {
 	if (!input.content) throw new FileUploadError("content (base64) required");
-	if (!input.filename) throw new FileUploadError("filename required");
-	if (input.slug && !/^[a-zA-Z0-9_-]{3,32}$/.test(input.slug)) {
-		throw new FileUploadError("slug must be 3-32 chars, alphanumeric/_/- only");
-	}
 
 	let bytes: Uint8Array;
 	try {
@@ -27,8 +35,37 @@ export async function createFile(db: Db, env: Env, accountId: string, input: Cre
 	} catch {
 		throw new FileUploadError("content must be valid base64");
 	}
-	if (bytes.byteLength > MAX_FILE_BYTES) {
-		throw new FileUploadError(`file exceeds ${MAX_FILE_BYTES / (1024 * 1024)}MB limit`);
+
+	return storeFile(db, env, accountId, bytes, input, baseUrl, MAX_BASE64_FILE_BYTES);
+}
+
+export async function createFileFromBytes(
+	db: Db,
+	env: Env,
+	accountId: string,
+	bytes: Uint8Array,
+	input: CreateFileInput,
+	baseUrl: string,
+) {
+	return storeFile(db, env, accountId, bytes, input, baseUrl, MAX_FILE_BYTES);
+}
+
+async function storeFile(
+	db: Db,
+	env: Env,
+	accountId: string,
+	bytes: Uint8Array,
+	input: CreateFileInput,
+	baseUrl: string,
+	maxBytes: number,
+) {
+	if (!input.filename) throw new FileUploadError("filename required");
+	if (input.slug && !/^[a-zA-Z0-9_-]{3,32}$/.test(input.slug)) {
+		throw new FileUploadError("slug must be 3-32 chars, alphanumeric/_/- only");
+	}
+	if (bytes.byteLength === 0) throw new FileUploadError("file is empty");
+	if (bytes.byteLength > maxBytes) {
+		throw new FileUploadError(`file exceeds ${maxBytes / (1024 * 1024)}MB limit`);
 	}
 
 	const slug = input.slug ?? generateSlug();

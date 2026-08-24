@@ -18,7 +18,7 @@ https://github.com/user-attachments/assets/a6846cd4-9524-4a0a-8ca3-4e5464a02f30
 - **Pastebin** (`create_paste`) — share text/code snippets with a link. private, unlisted, or burn-after-read.
 - **Mailbox** (`create_inbox`) — claim a real `handle@hdls.tools` address. read OTPs and webhooks, send and receive, threaded replies. one per account.
 - **Email me** (`email_me`) — email yourself right now, or schedule it for a future timestamp.
-- **File sharing** (`create_file`) — upload a file, get back a public URL. up to 10MB.
+- **File sharing** (`create_file`) — upload a file, get back a public URL. up to 1MB via base64/MCP, up to 5MB via raw-body REST upload.
 
 ## Connect via MCP
 
@@ -75,7 +75,7 @@ opencode mcp auth headlesstools
 | `list_inbox_messages` | List messages received in an inbox |
 | `get_inbox_message` | Fetch the full content of a received email |
 | `email_me` | Email the account owner's own verified address, now or at a future time |
-| `create_file` | Upload a file (base64-encoded) and get back a public URL. Max 10MB |
+| `create_file` | Upload a file (base64-encoded) and get back a public URL. Max 1MB — for bigger files, use `PUT /v1/files` over REST |
 | `list_files` | List your uploaded files |
 | `delete_file` | Delete an uploaded file |
 
@@ -92,6 +92,13 @@ curl -X POST https://hdls.tools/v1/links -H "authorization: Bearer hlt_live_..."
   -d '{"url":"https://example.com"}'
 ```
 
+Uploading a file from disk? Send the raw bytes as the request body instead of base64 — no shell argument-length limits, no 33% inflation:
+
+```bash
+curl -T ./photo.png -H "authorization: Bearer hlt_live_..." \
+  "https://hdls.tools/v1/files?filename=photo.png"
+```
+
 | Resource | Endpoints |
 | --- | --- |
 | `/v1/auth` | `POST /signup`, `POST /verify`, `GET /keys`, `POST /keys`, `DELETE /keys/:id` |
@@ -99,7 +106,7 @@ curl -X POST https://hdls.tools/v1/links -H "authorization: Bearer hlt_live_..."
 | `/v1/pastes` | `POST /`, `GET /`, `GET /:slug`, `DELETE /:slug` |
 | `/v1/inboxes` | `POST /`, `GET /`, `GET /:id`, `POST /:id/send`, `GET /:id/messages/:messageId`, `DELETE /:id` |
 | `/v1/email-me` | `POST /` |
-| `/v1/files` | `POST /`, `GET /`, `DELETE /:slug` |
+| `/v1/files` | `POST /` (JSON, base64, max 1MB), `PUT /` (raw body, max 5MB), `GET /`, `DELETE /:slug` |
 
 Short links resolve at the bare root (`hdls.tools/:slug`), paste content is served raw at `/p/:slug`, and uploaded files at `/f/:slug`.
 

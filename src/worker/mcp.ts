@@ -8,7 +8,7 @@ import { normalizeHandle, InvalidHandleError } from "./lib/handle";
 import { checkRateLimit } from "./lib/rate-limit";
 import { sendFromInbox, SendEmailError } from "./lib/send-email";
 import { emailMe, EmailMeError } from "./lib/email-me";
-import { createFile, FileUploadError } from "./lib/files";
+import { createFileFromBase64, FileUploadError } from "./lib/files";
 
 function isValidUrl(value: string): boolean {
 	try {
@@ -333,7 +333,7 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 	server.registerTool(
 		"create_file",
 		{
-			description: "Upload a file (base64-encoded content) and get back a public, directly-linkable URL. Max 10MB.",
+			description: "Upload a file (base64-encoded content) and get back a public, directly-linkable URL. Max 1MB.",
 			inputSchema: z.object({
 				content: z.string().describe("Base64-encoded file content"),
 				filename: z.string(),
@@ -345,7 +345,7 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 		async ({ content, filename, contentType, slug, expiresIn }) => {
 			if (!(await checkRateLimit(env.CREATE_RATE_LIMITER, accountId))) return RATE_LIMIT_ERROR;
 			try {
-				const file = await createFile(db, env, accountId, { content, filename, contentType, slug, expiresIn }, baseUrl);
+				const file = await createFileFromBase64(db, env, accountId, { content, filename, contentType, slug, expiresIn }, baseUrl);
 				return { content: [{ type: "text", text: JSON.stringify(file) }] };
 			} catch (err) {
 				const message = err instanceof FileUploadError ? err.message : "failed to upload";

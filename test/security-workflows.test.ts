@@ -3,7 +3,8 @@ import { SELF } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { getDb } from "../src/db";
 import { claimUploadToken, createFileFromBytes, createUploadToken } from "../src/worker/lib/files";
-import { generateSlug, hashApiKey, hashLoginCode, validateCustomSlug } from "../src/worker/lib/keys";
+import { generateShortLinkSlug, generateSlug, hashApiKey, hashLoginCode, validateCustomSlug } from "../src/worker/lib/keys";
+import { createLink } from "../src/worker/lib/links";
 import { resolvePaste } from "../src/worker/lib/pastes";
 import { resolveAccountFromCode } from "../src/worker/lib/auth-flow";
 import fileRawRoutes from "../src/worker/routes/file-raw";
@@ -79,6 +80,17 @@ describe("security-sensitive workflows", () => {
 		expect(slugs.size).toBe(256);
 		for (const slug of slugs) expect(slug).toMatch(/^[23456789abcdefghjkmnpqrstuvwxyz]{26}$/);
 		expect(() => validateCustomSlug("oauth", { root: true })).toThrow("slug is reserved");
+	});
+
+	it("generates compact slugs for shortened links", async () => {
+		const generated = new Set(Array.from({ length: 256 }, () => generateShortLinkSlug()));
+		expect(generated.size).toBe(256);
+		for (const slug of generated) expect(slug).toMatch(/^[23456789abcdefghjkmnpqrstuvwxyz]{10}$/);
+
+		const accountId = crypto.randomUUID();
+		await seedAccount(accountId, `${accountId}@example.com`);
+		const link = await createLink(getDb(env.DB), accountId, { url: "https://example.com/somewhere" });
+		expect(link.slug).toMatch(/^[23456789abcdefghjkmnpqrstuvwxyz]{10}$/);
 	});
 
 	it("consumes an upload token exactly once across concurrent claims", async () => {

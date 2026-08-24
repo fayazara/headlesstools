@@ -26,6 +26,9 @@ importers:
       hono:
         specifier: 4.13.4
         version: 4.13.4
+      nanoid:
+        specifier: 5.1.16
+        version: 5.1.16
       postal-mime:
         specifier: ^3.0.0
         version: 3.0.0

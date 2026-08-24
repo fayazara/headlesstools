@@ -7,6 +7,7 @@
 		"agents": "^0.21.0",
 		"drizzle-orm": "^0.45.2",
 		"hono": "4.13.4",
+		"nanoid": "5.1.16",
 		"postal-mime": "^3.0.0",
 		"react": "19.2.1",
 		"react-dom": "19.2.1",

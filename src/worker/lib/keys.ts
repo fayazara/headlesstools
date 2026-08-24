@@ -1,5 +1,8 @@
+import { customAlphabet } from "nanoid";
+
 const KEY_PREFIX = "hlt_live_";
 const SLUG_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
+const randomSlug = customAlphabet(SLUG_ALPHABET);
 const CUSTOM_SLUG_RE = /^[a-zA-Z0-9_-]{3,32}$/;
 const RESERVED_ROOT_SLUGS = new Set(["authorize", "mcp", "oauth", "v1", "p", "f"]);
 
@@ -48,18 +51,11 @@ export function generateUploadToken(): string {
 }
 
 export function generateSlug(length = 26): string {
-	// 31^26 is slightly above 128 bits. Rejection sampling removes modulo bias.
-	let slug = "";
-	const unbiasedCeiling = Math.floor(256 / SLUG_ALPHABET.length) * SLUG_ALPHABET.length;
-	while (slug.length < length) {
-		const bytes = crypto.getRandomValues(new Uint8Array(length - slug.length));
-		for (const byte of bytes) {
-			if (byte >= unbiasedCeiling) continue;
-			slug += SLUG_ALPHABET[byte % SLUG_ALPHABET.length];
-			if (slug.length === length) break;
-		}
-	}
-	return slug;
+	return randomSlug(length);
+}
+
+export function generateShortLinkSlug(): string {
+	return randomSlug(10);
 }
 
 export class InvalidSlugError extends Error {}

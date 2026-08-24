@@ -1,5 +1,5 @@
 import { links, type Db } from "../../db";
-import { generateSlug, InvalidSlugError, validateCustomSlug } from "./keys";
+import { generateShortLinkSlug, InvalidSlugError, validateCustomSlug } from "./keys";
 import { assertLinkQuota, QuotaExceededError } from "./quotas";
 import { isUniqueConstraintError, normalizeExpiresIn, ValidationError } from "./validation";
 
@@ -39,7 +39,7 @@ export async function createLink(db: Db, accountId: string, input: CreateLinkInp
 			const [link] = await db
 				.insert(links)
 				.values({
-					slug: customSlug ?? generateSlug(),
+					slug: customSlug ?? generateShortLinkSlug(),
 					targetUrl,
 					accountId,
 					expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined,

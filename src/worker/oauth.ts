@@ -164,7 +164,10 @@ function page(title: string, body: string) {
 			headers: {
 				"content-type": "text/html; charset=utf-8",
 				"cache-control": "no-store",
-				"content-security-policy": "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+				// Do not restrict form-action to self here: browsers apply it to
+				// redirects, while OAuth must navigate to the client's validated
+				// callback (often an ephemeral localhost port for CLI agents).
+				"content-security-policy": "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'",
 				"referrer-policy": "no-referrer",
 				"x-content-type-options": "nosniff",
 			},

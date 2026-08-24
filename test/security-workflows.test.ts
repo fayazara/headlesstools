@@ -48,6 +48,7 @@ describe("security-sensitive workflows", () => {
 		});
 		const authorize = await SELF.fetch(`https://hdls.tools/authorize?${query}`);
 		expect(authorize.status).toBe(200);
+		expect(authorize.headers.get("content-security-policy")).not.toContain("form-action 'self'");
 
 		const email = `${crypto.randomUUID()}@example.com`;
 		const code = "123456";

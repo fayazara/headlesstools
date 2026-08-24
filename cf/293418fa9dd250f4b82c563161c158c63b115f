@@ -1,0 +1,27 @@
+package.json
+  s_31735a1924af5a::t_3ae142d4f28d21 10
+pnpm-lock.yaml
+  s_31735a1924af5a::t_d410cdc473e5e0 29-31
+src/worker/lib/keys.ts
+  s_31735a1924af5a::t_a09058ddd5e474 1-2,5,54-58
+src/worker/lib/links.ts
+  s_31735a1924af5a::t_f5dbe9faca193a 2,42
+test/security-workflows.test.ts
+  s_31735a1924af5a::t_e27b81f5c6d78c 6-7,85-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "cf293418fa9dd250f4b82c563161c158c63b115f",
+  "prompts": {},
+  "sessions": {
+    "s_31735a1924af5a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a032fb-515c-73e0-b096-4a2825a5f0e2",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}

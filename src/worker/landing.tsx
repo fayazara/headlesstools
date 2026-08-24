@@ -331,14 +331,14 @@ async function Page({ origin }: { origin: string }) {
       </header>
 
       <section class="pt-16 pb-8">
-        <h1 class="text-balance mb-3.5 text-[26px] leading-[1.25] tracking-[-0.02em] sm:text-[34px] font-medium">
+        <h1 class="text-balance mb-3.5 text-[26px] leading-tight tracking-[-0.02em] sm:text-[34px] font-medium">
           Tools for agents
         </h1>
         <p class="text-pretty leading-[1.6] text-dim">
           Tools you need where you work everyday.
         </p>
         <p class="text-pretty leading-[1.6] text-dim mt-4">
-          A URL Shortener, a Pastebin, Mailbox, Self reminder, and file uploading and sharing primitives right inside Claude Code, Codex, Open Code or any harness that supports MCPs.
+          A URL Shortener, a Pastebin, Mailbox, Self reminder, and file uploading and sharing primitives right inside any harness that supports MCPs.
         </p>
         <div className="mt-8">
           <p>Works with</p>

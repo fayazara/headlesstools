@@ -1,3 +1,5 @@
+
+
 # headlesstools
 
 Headless tools for AI agents.
@@ -153,6 +155,12 @@ pnpm dev
 ```
 
 `pnpm dev` runs on the Cloudflare Vite plugin, which emulates the bindings declared in `wrangler.json` (D1, R2, KV, Email, rate limits) locally.
+
+Run the test suite:
+
+```bash
+pnpm test
+```
 
 Apply migrations locally:
 

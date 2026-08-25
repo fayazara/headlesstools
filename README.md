@@ -18,7 +18,7 @@ https://github.com/user-attachments/assets/a6846cd4-9524-4a0a-8ca3-4e5464a02f30
 - **Pastebin** (`create_paste`) — share text/code snippets with a link. private, unlisted, or burn-after-read.
 - **Mailbox** (`create_inbox`) — claim a real `handle@hdls.tools` address. read OTPs and webhooks, send and receive, threaded replies. one per account.
 - **Email me** (`email_me`) — email yourself right now, or schedule it for a future timestamp.
-- **File sharing** (`create_file`) — get a one-time upload URL, PUT the raw file to it, get back a public link. up to 10MB, no base64 anywhere.
+- **File sharing** (`create_file`) — get a one-time upload URL, PUT the raw file to it, get back a public link. up to 10MB, no base64 anywhere. temporary storage only — auto-deletes after 12 hours.
 
 ## Connect via MCP
 
@@ -126,7 +126,7 @@ The homepage also returns a markdown rendition when requested with `Accept: text
 
 - Links: 1,000 per account.
 - Pastes: 500 per account, 1MB each.
-- Files: 100 per account, 500MB total, 10MB each. Upload URLs expire after 10 minutes and can be used only once.
+- Files: 100 per account, 500MB total, 10MB each. Upload URLs expire after 10 minutes and can be used only once. Files themselves are temporary storage — every file is deleted 12 hours after upload, regardless of `expiresIn`.
 - Email: 100 outbound messages per UTC day and 256KB of text/HTML per message.
 - Inbox: 1,000 inbound messages and 250MB of raw mail per inbox. Individual inbound messages are capped at 5MB and messages are retained for 30 days.
 

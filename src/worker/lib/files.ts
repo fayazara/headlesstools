@@ -5,6 +5,7 @@ import { assertFileQuota, QuotaExceededError } from "./quotas";
 import { hasControlCharacters, isUniqueConstraintError, normalizeExpiresIn, ValidationError } from "./validation";
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+export const MAX_FILE_TTL_SECONDS = 12 * 60 * 60;
 const UPLOAD_TOKEN_TTL_MS = 10 * 60 * 1000;
 const MAX_FILENAME_CHARS = 255;
 const MAX_CONTENT_TYPE_CHARS = 255;
@@ -22,7 +23,7 @@ type ValidatedFileInput = {
 	filename: string;
 	contentType: string;
 	slug?: string;
-	expiresAt?: Date;
+	expiresAt: Date;
 };
 
 function validateFileInput(input: CreateFileInput): ValidatedFileInput {
@@ -40,11 +41,14 @@ function validateFileInput(input: CreateFileInput): ValidatedFileInput {
 	try {
 		const slug = validateCustomSlug(input.slug);
 		const expiresIn = normalizeExpiresIn(input.expiresIn);
+		// Files are always temporary: 12h is a hard ceiling regardless of what's
+		// requested, not just a default, so we never end up hosting long-lived files.
+		const ttlSeconds = Math.min(expiresIn ?? MAX_FILE_TTL_SECONDS, MAX_FILE_TTL_SECONDS);
 		return {
 			filename,
 			contentType,
 			slug,
-			expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined,
+			expiresAt: new Date(Date.now() + ttlSeconds * 1000),
 		};
 	} catch (error) {
 		if (error instanceof InvalidSlugError || error instanceof ValidationError) {
@@ -88,7 +92,7 @@ export async function claimUploadToken(db: Db, token: string): Promise<(Validate
 		filename: claimed.filename,
 		contentType: claimed.contentType,
 		slug: claimed.slug ?? undefined,
-		expiresAt: claimed.fileExpiresAt ?? undefined,
+		expiresAt: claimed.fileExpiresAt ?? new Date(Date.now() + MAX_FILE_TTL_SECONDS * 1000),
 	};
 }
 

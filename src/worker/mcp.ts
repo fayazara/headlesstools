@@ -7,7 +7,7 @@ import { normalizeHandle, InvalidHandleError } from "./lib/handle";
 import { checkRateLimit } from "./lib/rate-limit";
 import { sendFromInbox, SendEmailError } from "./lib/send-email";
 import { emailMe, EmailMeError } from "./lib/email-me";
-import { createUploadToken, FileUploadError } from "./lib/files";
+import { createUploadToken, FileUploadError, MAX_FILE_TTL_SECONDS } from "./lib/files";
 import { createLink, LinkError } from "./lib/links";
 import { createPaste, PasteError, resolvePaste } from "./lib/pastes";
 import { PayloadTooLargeError, readBodyWithLimit } from "./lib/body";
@@ -292,12 +292,19 @@ function buildServer(env: Env, accountId: string, baseUrl: string) {
 			description:
 				"Get a one-time upload URL for a file, up to 10MB. This tool does not take file content — it returns an uploadUrl valid for 10 minutes. " +
 				"To finish the upload, PUT the raw file bytes to that URL (e.g. `curl -T /path/to/file '<uploadUrl>'`), no encoding or auth header needed. " +
-				"The final response from that PUT contains the public, directly-linkable file URL.",
+				"The final response from that PUT contains the public, directly-linkable file URL. " +
+				"Files are temporary storage only: they're deleted 12 hours after upload, no exceptions.",
 			inputSchema: z.object({
 				filename: z.string(),
 				contentType: z.string().optional().describe("MIME type, e.g. image/png"),
 				slug: z.string().regex(/^[a-zA-Z0-9_-]{3,32}$/).optional(),
-				expiresIn: z.number().int().positive().max(365 * 24 * 60 * 60).optional().describe("Seconds until the file expires"),
+				expiresIn: z
+					.number()
+					.int()
+					.positive()
+					.max(MAX_FILE_TTL_SECONDS)
+					.optional()
+					.describe("Seconds until the file expires, capped at 12 hours (43200s). Defaults to the full 12 hours."),
 			}),
 		},
 		async ({ filename, contentType, slug, expiresIn }) => {

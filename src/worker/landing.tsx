@@ -115,6 +115,7 @@ ${DOC_SNIPPETS.rest(origin)}
 - 1,000 links, 500 pastes, and 100 files per account.
 - Pastes are capped at 1MB. Files are capped at 10MB each and 500MB total.
 - Upload URLs expire after 10 minutes and are single-use.
+- Files are temporary storage only: every file is deleted 12 hours after upload, regardless of \`expiresIn\`.
 - Outbound email is capped at 100 messages per UTC day. Inbox messages are retained for 30 days.
 - Use a stable \`Idempotency-Key\` header (or MCP \`idempotencyKey\`) when retrying email sends.
 

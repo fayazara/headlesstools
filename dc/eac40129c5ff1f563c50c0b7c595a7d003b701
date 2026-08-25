@@ -1,0 +1,25 @@
+README.md
+  s_387a7ff9456a57::t_fb8449cbfba41f 21,129
+src/worker/landing.tsx
+  s_387a7ff9456a57::t_0eede0f4bd2f63 118
+src/worker/lib/files.ts
+  s_387a7ff9456a57::t_67c1c0a4555a6c 8,26,44-46,51,95
+src/worker/mcp.ts
+  s_387a7ff9456a57::t_5d0377b73ab2e3 10,295-296,301-307
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "dceac40129c5ff1f563c50c0b7c595a7d003b701",
+  "prompts": {},
+  "sessions": {
+    "s_387a7ff9456a57": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "846cf2d3-809f-4600-b04e-b0bc9957413e",
+        "model": "unknown"
+      },
+      "human_author": "Fayaz Ahmed <fayazara@gmail.com>"
+    }
+  }
+}
